@@ -1,26 +1,34 @@
-/* Which kinds of lens implant fit which wishes and which eyes.
- * No DOM, so Node can test it (tests/rules.test.js); drawn by app.js.
+/* Which kinds of lens implant fit which wishes and which eyes
+ * (content/learn/lens-implants.md, drawn by iolpicker.js).
+ * No DOM, so Node can test it (tests/iolpicker-rules.test.js).
  *
- * The rules: monofocal lenses suit every eye; extended depth and multifocal
- * lenses need a healthy cornea, macula and optic nerve, and bring halos;
- * monovision is a good fit only once it has been tried and liked with
- * contact lenses, because it is permanent; toric versions are added for more
- * than a little astigmatism, and up to about 1 diopter is treated with the
- * laser. The light adjustable lens follows its FDA labeling: UV-protective
- * glasses during all waking hours until the power is locked in, and not for
- * macular disease, light-sensitizing medicines, herpes of the eye or
- * nystagmus. The light treatments are given through a dilated pupil.
+ * The rules follow the page's own text: monofocal lenses suit every eye;
+ * extended depth and multifocal lenses need a healthy cornea, macula and
+ * optic nerve, and bring halos; monovision is a good fit only once it has
+ * been tried and liked with contact lenses, because it is permanent; toric versions are added for more than a little
+ * astigmatism, and up to about 1 diopter is treated with the laser. The light
+ * adjustable lens follows its FDA labeling: UV-protective glasses during all
+ * waking hours until the power is locked in, and not for macular disease,
+ * light-sensitizing medicines, herpes of the eye or nystagmus. The light
+ * treatments are given through a dilated pupil.
  *
  * Laser-assisted surgery is assumed with a toric, extended depth, multifocal
- * or light adjustable lens, and for a little astigmatism, unless something
- * in the eye rules the laser out (poor dilation, a corneal scar, a bleb or
- * tube shunt, trouble lying flat or still); the lens is then placed with
- * standard surgery and its verdict does not change.
+ * or light adjustable lens, and for a little astigmatism, unless
+ * something in the eye rules the laser out (poor dilation, a corneal scar,
+ * a bleb or tube shunt, trouble lying flat or still); the lens is then
+ * placed with standard surgery and its verdict does not change.
  *
- * Practice options: a practice can leave out lenses it does not offer
+ * Practice options (pick's second argument; this page passes none, which
+ * offers everything): a practice can leave out lenses it does not offer
  * (the monofocal set for distance is always offered) and laser-assisted
- * surgery. Lenses left out are dropped from the result, and the notes only
- * mention what is offered.
+ * surgery. Lenses left out are dropped from the result, the notes only
+ * mention what is offered, and conditionsFor() and questionApplies() leave
+ * out what then no longer matters.
+ *
+ * Shared engine: the generic Lens Implant Planner (github.com/jon6fingrs/
+ * iol-picker) copies this file as it is, every day, and runs its own tests on
+ * it. Keep the options working and the file free of DOM and page-specific
+ * code. QUESTIONS lives here so both pages ask the same questions.
  *
  * Every lens gets a verdict, 'good', 'possible' or 'avoid', with the
  * reasons. The worst reason wins. It is a starting point for a talk with the
@@ -28,43 +36,25 @@
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.IolRules = factory();
+  else root.JKIolPicker = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // anchor: the heading on lens-implants.md that explains the lens
   // extra: usually carries an out-of-pocket charge on top of insurance
-  // what: one line for the result card; about: the fuller explanation shown
-  // in "About the lens options" on the page
   var LENSES = [
-    { id: 'distance', name: 'Monofocal, set for distance', extra: false,
-      what: 'Sharp distance vision with the least glare. Reading glasses for near.',
-      about: [
-        'A monofocal lens focuses at one distance. It is the standard lens, the one most people receive, and it is usually covered by insurance. Vision at its set distance is very sharp and high in contrast, and it gives the fewest problems with glare at night.',
-        'Set for distance, the most common choice, driving, television and faces across a room are clear without glasses. Reading glasses are needed for near, and arm’s length (a computer or the car dashboard) is usable but softer.'] },
-    { id: 'near', name: 'Monofocal, set for near', extra: false,
-      what: 'Reading without glasses; glasses for driving and distance.',
-      about: [
-        'The same standard lens, set so that reading is clear without glasses, with glasses worn for distance and driving. Some people who have been nearsighted all their lives, and are used to reading without glasses, prefer this.'] },
-    { id: 'monovision', name: 'Monovision', extra: false,
-      what: 'One eye set for distance, the other for near, with monofocal lenses.',
-      about: [
-        'Monovision uses monofocal lenses with one eye set for distance and the other for near or arm’s length. The brain learns to use whichever eye is clear for the task. Done well, it gives a good range from distance to near without the halos or loss of contrast of a multifocal lens.',
-        'The trade-offs are slightly less depth perception and a little less sharpness with both eyes together; glasses may still help for night driving or long reading. Not everyone adapts. It suits people who have used monovision with contact lenses and liked it. Because the result is permanent, try it with contact lenses first: surgery should not be the first time.'] },
-    { id: 'lal', name: 'Light adjustable lens', extra: true,
-      what: 'A monofocal lens whose power is fine-tuned with light treatments after surgery, once you can try the result.',
-      about: [
-        'A monofocal lens whose power can be changed after surgery. Once the eye has healed, usually two to three weeks later, you try out the vision. Then, over a few short visits, a measured pattern of ultraviolet light is shone on the lens through a dilated pupil to fine-tune its power, correcting leftover nearsightedness, farsightedness or astigmatism. A final treatment locks the power in.',
-        'It is the surest way to land the target, and you can try the result, including monovision, before it is final. It also helps when the power is hard to predict, such as after LASIK, PRK or RK. UV-protective glasses must be worn during all waking hours, indoors and out, until the power is locked in, usually some weeks. It is not used with macular disease, with medicines that make the eyes sensitive to light, after a herpes infection of the eye, with eyes that shake (nystagmus), or when the pupil does not dilate well.'] },
-    { id: 'edof', name: 'Extended depth of focus', extra: true,
-      what: 'Distance to arm’s length without glasses; light readers for small print. Mild halos with some designs.',
-      about: [
-        'An extended depth of focus (EDOF) lens stretches the range of clear vision from distance to arm’s length. Most people can drive, use a computer and see a dashboard without glasses, and use light reading glasses for small print.',
-        'Some notice mild halos or glare around lights at night, far less than with a multifocal lens. Designs differ: some use fine rings and give more near vision with more halos; others have no rings and give fewer halos with a little less near vision.'] },
-    { id: 'multifocal', name: 'Multifocal', extra: true,
-      what: 'Far, arm’s length and near, with the most freedom from glasses and the most halos.',
-      about: [
-        'A multifocal lens (bifocal or trifocal) splits light between distances using fine rings on its surface, so far, arm’s length and near can all be usable without glasses. It gives the most freedom from glasses.',
-        'The trade-offs: halos or rings around lights at night (most people adapt over months, but some remain bothered), and slightly less contrast, which matters in dim light and more so when the eye has another condition. It works best when the cornea, macula and optic nerve are healthy.'] }
+    { id: 'distance', name: 'Monofocal, set for distance', anchor: 'monofocal-lenses', extra: false,
+      what: 'Sharp distance vision with the least glare. Reading glasses for near.' },
+    { id: 'near', name: 'Monofocal, set for near', anchor: 'monofocal-lenses', extra: false,
+      what: 'Reading without glasses; glasses for driving and distance.' },
+    { id: 'monovision', name: 'Monovision', anchor: 'monovision', extra: false,
+      what: 'One eye set for distance, the other for near, with monofocal lenses.' },
+    { id: 'lal', name: 'Light adjustable lens', anchor: 'light-adjustable-lenses', extra: true,
+      what: 'A monofocal lens whose power is fine-tuned with light treatments after surgery, once you can try the result.' },
+    { id: 'edof', name: 'Extended depth of focus', anchor: 'extended-depth-of-focus-lenses', extra: true,
+      what: 'Distance to arm’s length without glasses; light readers for small print. Mild halos with some designs.' },
+    { id: 'multifocal', name: 'Multifocal', anchor: 'multifocal-lenses', extra: true,
+      what: 'Far, arm’s length and near, with the most freedom from glasses and the most halos.' }
   ];
 
   // The checklist, grouped. A condition's effect on each lens is in pick().
@@ -94,6 +84,20 @@
       ['photo', 'A medicine that makes you sensitive to sunlight (such as doxycycline, amiodarone or hydrochlorothiazide)', ['lal']],
       ['other', 'Something else not listed']] }
   ];
+
+  // The questions, in order: key (the answer's name in pick()), short (its
+  // label on a printout), label, and values [answer, chip text]. DEFAULTS
+  // are the answers before anyone chooses.
+  var QUESTIONS = [
+    { key: 'glasses', short: 'Without glasses', label: 'After surgery, what would you like to do without glasses?', values: [['readers', 'See far; reading glasses are fine'], ['near', 'Read up close; glasses for distance'], ['computer', 'Far and computer or dashboard'], ['none', 'As little glasses as possible, reading too']] },
+    { key: 'night', short: 'Glare at night', label: 'How much would glare or halos around lights at night bother you?', values: [['', 'Not at all'], ['some', 'A little would be OK'], ['yes', 'Any would bother me, or I drive a lot at night']] },
+    { key: 'monovision', short: 'Monovision in contacts', label: 'Have you tried monovision with contact lenses (one eye for distance, one for near)?', values: [['never', 'Never tried'], ['liked', 'Yes, liked it'], ['disliked', 'Yes, did not like it']] },
+    { key: 'adjust', short: 'Light treatments', label: 'Would you come back for several short light treatments, and wear UV-protective glasses for a few weeks, to fine-tune the result?', values: [['', 'Not sure'], ['yes', 'Yes'], ['no', 'No']] },
+    { key: 'eyes', short: 'Eyes having surgery', label: 'Which eyes are having cataract surgery?', values: [['both', 'Both eyes'], ['one', 'Just one eye'], ['only', 'My only seeing eye']] },
+    { key: 'refractive', short: 'LASIK, PRK or RK', label: 'Have you had laser vision correction or RK?', values: [['no', 'No'], ['myopic', 'LASIK or PRK for nearsightedness'], ['hyperopic', 'LASIK or PRK for farsightedness'], ['lasik', 'LASIK or PRK, not sure which'], ['rk', 'RK (radial cuts)']] },
+    { key: 'astig', short: 'Astigmatism', label: 'Have you been told you have astigmatism?', values: [['unknown', 'Not sure'], ['no', 'No'], ['little', 'Yes, a little'], ['more', 'Yes, more than a little']] }
+  ];
+  var DEFAULTS = { glasses: 'readers', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both' };
 
   var RANK = { good: 0, possible: 1, avoid: 2 };
   // lenses placed with laser-assisted surgery whatever the astigmatism
@@ -175,7 +179,7 @@
       say('distance', 'possible', 'Set for distance, you would need glasses to read instead.');
       say('lal', 'good', 'Can be set for near, and fine-tuned once you try it.');
       say('edof', 'possible', 'Aimed at distance and arm’s length; small print would still need glasses.');
-      say('multifocal', 'avoid', 'If glasses for distance are fine, a monofocal lens set for near gives sharp reading without the halos.');
+      say('multifocal', 'avoid', 'If glasses for distance are fine, a monofocal set for near gives sharp reading without the halos.');
     } else {
       say('distance', 'good', 'Matches what you want: clear distance, reading glasses for near.');
       say('lal', 'good', 'Its power is checked and fine-tuned after surgery, so it is the surest way to sharp distance vision.');
@@ -298,7 +302,7 @@
       // or with more, a toric lens
       var toric = ok && astig && (a.astig === 'more' || !laserOK);
       var wants = o.laser && ok && (astig || LASER_LENSES.indexOf(l.id) >= 0);
-      return { id: l.id, name: l.name, extra: l.extra, what: l.what, verdict: r.verdict, why: why, toric: toric,
+      return { id: l.id, name: l.name, anchor: l.anchor, extra: l.extra, what: l.what, verdict: r.verdict, why: why, toric: toric,
         wantsLaser: wants, laser: wants && laserOK,
         // the laser's curved cuts treat a little astigmatism instead of a toric lens
         laserAstig: ok && astig && a.astig === 'little' && laserOK,
@@ -334,9 +338,10 @@
     if (lasik || a.refractive === 'rk') notes.push('If you have the records of your ' + (a.refractive === 'rk' ? 'RK' : 'LASIK or PRK') + ' (the prescription before it, if nothing else), bring them: they help choose the lens power.');
     if (has('dryeye')) notes.push('Treat dry eye before the measurements for surgery; it can throw them off.');
     if (has('other')) notes.push('Many other conditions affect the choice of lens. Your surgeon will take them into account.');
-    notes.push('Lenses beyond a standard monofocal, toric versions' + (o.laser ? ' and laser-assisted surgery' : '') + ' may involve an out-of-pocket expense. It varies, so ask your surgeon’s office.');
+    notes.push('Lenses beyond a standard monofocal, toric versions' + (o.laser ? ' and laser-assisted surgery' : '') + ' may involve an out-of-pocket expense. It varies, so ask the surgeon’s office.');
     return { groups: groups, lenses: lenses, notes: notes };
   }
 
-  return { pick: pick, options: options, conditionsFor: conditionsFor, questionApplies: questionApplies, LENSES: LENSES, CONDITIONS: CONDITIONS };
+  return { pick: pick, options: options, conditionsFor: conditionsFor, questionApplies: questionApplies,
+    LENSES: LENSES, CONDITIONS: CONDITIONS, QUESTIONS: QUESTIONS, DEFAULTS: DEFAULTS };
 });
