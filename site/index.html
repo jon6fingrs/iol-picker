@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Nothing on this page may talk to a server: no fetch, no forms, no outside
+     scripts, styles, fonts or images. See README, "Privacy". -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Lens Implant Planner</title>
+<meta name="description" content="A guide to choosing a lens implant for cataract surgery, with a one-page printout for the chart. Runs entirely in the browser; nothing entered leaves the device.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0f6e74" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b1e" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lens Planner">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/rules.js" defer></script>
+<script src="js/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#results">Skip to results</a>
+
+<header class="top">
+  <div class="top__in">
+    <div class="brand">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="10.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5.5 16c3-1.6 4.6-4.4 5.4-7.6M26.5 16c-3 1.6-4.6 4.4-5.4 7.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="16" r="3.2" fill="currentColor"/></svg>
+      <div class="brand__text">
+        <span class="brand__name">Lens Implant Planner</span>
+        <span class="brand__doc" id="doc-line" hidden></span>
+      </div>
+    </div>
+    <div class="top__actions">
+      <button type="button" class="btn btn--quiet" id="btn-reset">Start over</button>
+      <button type="button" class="btn btn--quiet" id="btn-settings" aria-haspopup="dialog">Settings</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <section class="intro">
+    <h1>Choosing a lens implant for cataract surgery</h1>
+    <p>Answer a few questions about what you want after surgery and about your eyes. Every kind of lens is sorted into good fits, possible with trade-offs, and usually not advised, with the reasons. It is a starting point for a talk with your surgeon, not a decision.</p>
+    <p class="privacy">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 8V6a4 4 0 1 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3.5" y="8" width="13" height="9.5" rx="2" fill="currentColor"/></svg>
+      <span><b>Private by design.</b> Everything entered stays on this device. Nothing is sent over the internet or saved, and <b>Start over</b> erases it.</span>
+    </p>
+    <noscript><p class="panel">This planner needs JavaScript. The lens options are described below.</p></noscript>
+  </section>
+
+  <div class="layout">
+    <div class="ask">
+      <section class="panel" aria-labelledby="pt-h">
+        <h2 class="panel__h" id="pt-h">Patient <span class="panel__aside">for the printout, optional</span></h2>
+        <div class="fields">
+          <label class="field field--wide"><span>Name</span>
+            <input type="text" id="pt-name" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="80"></label>
+          <label class="field"><span>Date of birth</span>
+            <input type="date" id="pt-dob" autocomplete="off" max="2100-12-31"></label>
+          <div class="field">
+            <span id="pt-eye-l">Eye having surgery</span>
+            <div class="chips" role="group" aria-labelledby="pt-eye-l" id="pt-eye">
+              <button type="button" class="chip" data-eye="right" aria-pressed="false">Right</button>
+              <button type="button" class="chip" data-eye="left" aria-pressed="false">Left</button>
+              <button type="button" class="chip" data-eye="both" aria-pressed="false">Both</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">Leave blank to write in by hand on the printout. Not saved anywhere.</p>
+      </section>
+
+      <section class="panel" id="questions" aria-label="Questions"></section>
+      <p class="summary" id="summary" aria-live="polite"></p>
+    </div>
+
+    <div class="res">
+      <section class="panel panel--results" aria-labelledby="res-h">
+        <h2 class="panel__h" id="res-h">Results</h2>
+        <div id="results" tabindex="-1"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="about" id="about" aria-labelledby="about-h">
+    <h2 id="about-h">About the lens options</h2>
+    <div id="about-body"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>For education and discussion with a surgeon. It does not replace an examination and cannot know the measurements of an eye; many conditions not listed also affect the choice.</p>
+    <p>Lens Implant Planner is free for non-commercial use under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>. Based on the lens picker by Jonathan Katz, MD. <a href="https://github.com/jon6fingrs/iol-picker" target="_blank" rel="noopener noreferrer">Source code</a>.</p>
+  </div>
+</footer>
+
+<dialog class="dialog" id="settings" aria-labelledby="set-h">
+  <form method="dialog" class="dialog__in" id="settings-form">
+    <h2 id="set-h">Settings</h2>
+    <p class="hint">Settings are saved in this browser on this device. Patient details never are.</p>
+
+    <label class="field"><span>Surgeon name, as it should appear on the printout</span>
+      <input type="text" id="set-doctor" maxlength="120" placeholder="e.g. Jane Smith, MD" autocomplete="off"></label>
+
+    <fieldset class="set-group">
+      <legend>Lenses your practice offers</legend>
+      <div id="set-lenses"></div>
+    </fieldset>
+
+    <fieldset class="set-group">
+      <legend>Surgery</legend>
+      <label class="check"><input type="checkbox" id="set-laser"> <span>Laser-assisted (femtosecond) cataract surgery, including laser treatment of a little astigmatism</span></label>
+    </fieldset>
+
+    <label class="field"><span>Clear the patient’s answers after a period of no use</span>
+      <select id="set-idle">
+        <option value="0">Never</option>
+        <option value="5">After 5 minutes</option>
+        <option value="10">After 10 minutes</option>
+        <option value="20">After 20 minutes</option>
+        <option value="60">After 1 hour</option>
+      </select></label>
+
+    <fieldset class="set-group">
+      <legend>Set up other devices</legend>
+      <p class="hint">Open this link on another device, such as a clinic iPad, to give it the same settings. It holds only the settings above.</p>
+      <div class="copyrow"><input type="text" id="set-link" readonly aria-label="Setup link"><button type="button" class="btn btn--quiet" id="set-copy">Copy</button></div>
+    </fieldset>
+
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--quiet" id="set-forget">Forget settings on this device</button>
+      <button type="submit" class="btn btn--primary" value="done">Done</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="idle" id="idle" role="alertdialog" aria-labelledby="idle-t" hidden>
+  <p id="idle-t">No one has used the planner for a while. The answers will be cleared in <b id="idle-s">60</b> seconds.</p>
+  <button type="button" class="btn btn--primary" id="idle-keep">Keep working</button>
+</div>
+
+<div class="sheet" id="sheet" aria-hidden="true"></div>
+</body>
+</html>
