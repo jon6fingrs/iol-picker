@@ -175,7 +175,7 @@
     var res = R.pick(answers(), opts());
     var good = res.groups[0].lenses, maybe = res.groups[1].lenses, avoid = res.groups[2].lenses;
     sum.innerHTML = (good.length ? '<b>Good fits:</b> ' + esc(names(good)) : '<b>No lens fits everything you want.</b>') +
-      ' <span class="summary__n">· Possible: ' + maybe.length + ' · Not advised: ' + avoid.length + '</span> <a href="#results" data-jump>See details</a>';
+      ' <span class="summary__n">· Possible: ' + maybe.length + ' · Not advised: ' + avoid.length + '</span> <a href="#results" data-jump>See details</a> <a href="#" data-print>Print</a>';
 
     var shared = sharedTags(res), o = '';
     if (!good.length) o += '<p class="none">No lens fits everything you want. The trade-offs below are the ones to talk through with your surgeon.</p>';
