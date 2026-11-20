@@ -61,14 +61,14 @@ a printer, that file is saved wherever they put it, as with any document.
 | Path | What it is |
 | --- | --- |
 | `site/index.html` | the page, with its Content-Security-Policy |
-| `site/js/rules.js` | the rules: which lens fits which answers. No DOM, so Node tests it. Lenses, their descriptions and the conditions checklist are here too |
-| `site/js/app.js` | the page: questions, results, the about section, settings, idle timer and the print sheet |
+| `site/js/iolpicker-rules.js` | the rules engine: which lens fits which answers, the questions, lenses and conditions checklist. **Copied from jonathankatzmd.com; do not edit here** (see "Shared engine") |
+| `site/js/app.js` | the page: questions, results, the about section (the fuller lens explanations live here), settings, idle timer and the print sheet |
 | `site/css/style.css` | styles, including the print sheet (light and dark) |
 | `site/icon.svg`, `site/apple-touch-icon.png`, `site/manifest.webmanifest` | icons and home-screen app settings |
-| `tests/rules.test.js` | the clinical rules |
-| `tests/options.test.js` | practice options (lenses offered, laser) |
+| `tests/engine.test.js` | what this page needs from the engine (its clinical rules are tested on the website) |
 | `tests/privacy.test.js` | no network, no outside resources, only settings stored |
 | `.github/workflows/ci.yml` | runs the tests; on `main`, publishes `site/` to GitHub Pages |
+| `.github/workflows/sync-engine.yml` | copies the engine from the website daily and republishes when the tests pass |
 
 Run the tests with `node --test 'tests/*.test.js'` (Node 18 or later). To try
 the page locally, serve the `site` folder, for example
@@ -86,15 +86,46 @@ For a custom domain later: Settings → Pages → Custom domain, add the DNS
 records GitHub shows, and tick "Enforce HTTPS". All links in the site are
 relative, so it works at either address.
 
+## Shared engine
+
+The rules engine is maintained on jonathankatzmd.com
+([jonathankatzmd-zola](https://github.com/jon6fingrs/jonathankatzmd-zola),
+`static/js/iolpicker-rules.js`), which is the one source of truth. This site
+uses an exact copy at `site/js/iolpicker-rules.js`:
+
+- **To change a rule, question or lens, edit it on the website** and merge
+  it there, with that repo's tests. Never edit the copy here: the next sync
+  overwrites it.
+- **Sync engine** (`.github/workflows/sync-engine.yml`) runs every day, or
+  right away from the Actions tab → Sync engine → Run workflow. It fetches
+  the file from the website's `master`. If it changed, it runs this site's
+  tests on it; if they pass, it commits the copy to `main` (the commit names
+  the website commit it came from) and republishes the site. If they fail,
+  nothing changes, the run shows as failed, and GitHub emails you.
+- The tests here check only what this page relies on (`tests/engine.test.js`)
+  plus the privacy rules (`tests/privacy.test.js`, which also scans the
+  engine for network calls). The clinical rules are tested on the website,
+  along with the practice options this site uses
+  (`tests/iolpicker-options.test.js` there).
+- Differences between the two sites live in their front ends, not the
+  engine. The website links each lens to its article; this site shows the
+  fuller explanations in `site/js/app.js` (`ABOUT`), and a lens added on the
+  website without an entry there shows its one-line summary until one is
+  written.
+- GitHub pauses scheduled workflows in a repository with no activity for 60
+  days. If the website's rules have not changed for that long, the daily
+  sync may stop; the Actions tab shows a button to turn it back on, and
+  running it by hand always works.
+
 ## Clinical content
 
-The rules follow the reasoning written out at the top of `site/js/rules.js`.
-In short: monofocal lenses suit every eye; extended depth and multifocal
-lenses need a healthy cornea, macula and optic nerve, and bring halos;
-monovision should be tried with contact lenses first; the light adjustable
-lens follows its FDA labeling. The tool is a starting point for a
-conversation, not a decision, and the page and printout say so. Prices are
-not shown; lenses that usually cost extra are tagged.
+The rules follow the reasoning written out at the top of
+`site/js/iolpicker-rules.js`. In short: monofocal lenses suit every eye;
+extended depth and multifocal lenses need a healthy cornea, macula and optic
+nerve, and bring halos; monovision should be tried with contact lenses
+first; the light adjustable lens follows its FDA labeling. The tool is a
+starting point for a conversation, not a decision, and the page and printout
+say so. Prices are not shown; lenses that usually cost extra are tagged.
 
 ## License
 

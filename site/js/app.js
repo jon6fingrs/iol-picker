@@ -1,4 +1,6 @@
-/* Lens Implant Planner: the page. The rules are in rules.js, which is tested.
+/* Lens Implant Planner: the page. The rules, including the questions, are in
+ * iolpicker-rules.js, copied from jonathankatzmd.com by the sync workflow
+ * (README, "Shared engine"); never edit that file here.
  *
  * Privacy: this file never sends anything anywhere (the page's
  * Content-Security-Policy blocks it too). The only thing it stores is the
@@ -15,25 +17,39 @@
  */
 (function () {
   'use strict';
-  var R = window.IolRules;
+  var R = window.JKIolPicker;
   var app = document.getElementById('app');
   if (!R || !app) return;
 
-  var QUESTIONS = [
-    { key: 'glasses', short: 'Without glasses', label: 'After surgery, what would you like to do without glasses?', values: [['readers', 'See far; reading glasses are fine'], ['near', 'Read up close; glasses for distance'], ['computer', 'Far and computer or dashboard'], ['none', 'As little glasses as possible, reading too']] },
-    { key: 'night', short: 'Glare at night', label: 'How much would glare or halos around lights at night bother you?', values: [['', 'Not at all'], ['some', 'A little would be OK'], ['yes', 'Any would bother me, or I drive a lot at night']] },
-    { key: 'monovision', short: 'Monovision in contacts', label: 'Have you tried monovision with contact lenses (one eye for distance, one for near)?', values: [['never', 'Never tried'], ['liked', 'Yes, liked it'], ['disliked', 'Yes, did not like it']] },
-    { key: 'adjust', short: 'Light treatments', label: 'Would you come back for several short light treatments, and wear UV-protective glasses for a few weeks, to fine-tune the result?', values: [['', 'Not sure'], ['yes', 'Yes'], ['no', 'No']] },
-    { key: 'eyes', short: 'Eyes having surgery', label: 'Which eyes are having cataract surgery?', values: [['both', 'Both eyes'], ['one', 'Just one eye'], ['only', 'My only seeing eye']] },
-    { key: 'refractive', short: 'LASIK, PRK or RK', label: 'Have you had laser vision correction or RK?', values: [['no', 'No'], ['myopic', 'LASIK or PRK for nearsightedness'], ['hyperopic', 'LASIK or PRK for farsightedness'], ['lasik', 'LASIK or PRK, not sure which'], ['rk', 'RK (radial cuts)']] },
-    { key: 'astig', short: 'Astigmatism', label: 'Have you been told you have astigmatism?', values: [['unknown', 'Not sure'], ['no', 'No'], ['little', 'Yes, a little'], ['more', 'Yes, more than a little']] }
-  ];
+  var QUESTIONS = R.QUESTIONS;
   var HEADS = {
     good: ['Good fits', 'Match what you want, with nothing in your answers against them.'],
     possible: ['Possible, with trade-offs', 'Could work; the reasons say what to weigh.'],
     avoid: ['Usually not advised', 'Something in your answers argues against these.']
   };
-  var DEFAULTS = { glasses: 'readers', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both' };
+  var DEFAULTS = R.DEFAULTS;
+  // The fuller explanation of each lens for "About the lens options". The
+  // rules (shared with jonathankatzmd.com) carry only a one-line summary; a
+  // lens added there without an entry here shows that summary instead.
+  var ABOUT = {
+    distance: [
+      'A monofocal lens focuses at one distance. It is the standard lens, the one most people receive, and it is usually covered by insurance. Vision at its set distance is very sharp and high in contrast, and it gives the fewest problems with glare at night.',
+      'Set for distance, the most common choice, driving, television and faces across a room are clear without glasses. Reading glasses are needed for near, and arm’s length (a computer or the car dashboard) is usable but softer.'],
+    near: [
+      'The same standard lens, set so that reading is clear without glasses, with glasses worn for distance and driving. Some people who have been nearsighted all their lives, and are used to reading without glasses, prefer this.'],
+    monovision: [
+      'Monovision uses monofocal lenses with one eye set for distance and the other for near or arm’s length. The brain learns to use whichever eye is clear for the task. Done well, it gives a good range from distance to near without the halos or loss of contrast of a multifocal lens.',
+      'The trade-offs are slightly less depth perception and a little less sharpness with both eyes together; glasses may still help for night driving or long reading. Not everyone adapts. It suits people who have used monovision with contact lenses and liked it. Because the result is permanent, try it with contact lenses first: surgery should not be the first time.'],
+    lal: [
+      'A monofocal lens whose power can be changed after surgery. Once the eye has healed, usually two to three weeks later, you try out the vision. Then, over a few short visits, a measured pattern of ultraviolet light is shone on the lens through a dilated pupil to fine-tune its power, correcting leftover nearsightedness, farsightedness or astigmatism. A final treatment locks the power in.',
+      'It is the surest way to land the target, and you can try the result, including monovision, before it is final. It also helps when the power is hard to predict, such as after LASIK, PRK or RK. UV-protective glasses must be worn during all waking hours, indoors and out, until the power is locked in, usually some weeks. It is not used with macular disease, with medicines that make the eyes sensitive to light, after a herpes infection of the eye, with eyes that shake (nystagmus), or when the pupil does not dilate well.'],
+    edof: [
+      'An extended depth of focus (EDOF) lens stretches the range of clear vision from distance to arm’s length. Most people can drive, use a computer and see a dashboard without glasses, and use light reading glasses for small print.',
+      'Some notice mild halos or glare around lights at night, far less than with a multifocal lens. Designs differ: some use fine rings and give more near vision with more halos; others have no rings and give fewer halos with a little less near vision.'],
+    multifocal: [
+      'A multifocal lens (bifocal or trifocal) splits light between distances using fine rings on its surface, so far, arm’s length and near can all be usable without glasses. It gives the most freedom from glasses.',
+      'The trade-offs: halos or rings around lights at night (most people adapt over months, but some remain bothered), and slightly less contrast, which matters in dim light and more so when the eye has another condition. It works best when the cornea, macula and optic nerve are healthy.']
+  };
   var EYES = { right: 'Right', left: 'Left', both: 'Both' };
 
   function $(id) { return document.getElementById(id); }
@@ -211,7 +227,7 @@
     R.LENSES.forEach(function (l) {
       if (o.lenses.indexOf(l.id) < 0) return;
       h += '<article class="lens" id="lens-' + l.id + '"><h3>' + esc(l.name) + (l.extra ? ' <span class="tag">often extra cost</span>' : '') + '</h3>' +
-        l.about.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</article>';
+        (ABOUT[l.id] || [l.what]).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</article>';
     });
     h += '<article class="lens" id="lens-toric"><h3>Toric versions, for astigmatism</h3>' +
       '<p>Astigmatism means the front of the eye is curved more like a football than a basketball, which smears vision in one direction. A toric lens has astigmatism correction built in, and is turned during surgery to line up with it. Without it, an eye with significant astigmatism would need glasses for clear distance vision even after surgery.</p>' +
@@ -278,19 +294,28 @@
     var where = /^https?:$/.test(location.protocol) ? ' (' + location.host + location.pathname.replace(/index\.html$/, '') + ')' : '';
     s += '<p class="sheet__foot">Printed ' + esc(date) + ' from Lens Implant Planner' + esc(where) + '. A starting point for a talk with the surgeon, not a decision; it cannot know the eye’s measurements.</p>';
     sheetEl.innerHTML = s;
+    fitSheet();
   }
-  // fit one Letter page: measure at the printed width (7.3in) against the
-  // printable height (9.8in, less a little slack), stepping the type down
+  // Fit one Letter page: measure at the printed width (7.3in) and step the
+  // type down, then, if even the smallest type is too long, scale the whole
+  // sheet. The limit leaves room for browsers that use their own page
+  // margins and fonts (Safari on iPhone and iPad ignores @page margins and
+  // its system font runs wider), so it is well under the 9.8in that Letter
+  // with .6in margins would allow. Runs with every change, so the sheet is
+  // ready however printing is started.
+  var LIMIT = 9 * 96;
   function fitSheet() {
     sheetEl.classList.remove('is-long', 'is-tight');
+    sheetEl.style.zoom = '';
     sheetEl.classList.add('is-measuring');
-    var limit = 9.6 * 96;
-    if (sheetEl.offsetHeight > limit) sheetEl.classList.add('is-long');
-    if (sheetEl.offsetHeight > limit) { sheetEl.classList.remove('is-long'); sheetEl.classList.add('is-tight'); }
+    if (sheetEl.offsetHeight > LIMIT) sheetEl.classList.add('is-long');
+    if (sheetEl.offsetHeight > LIMIT) { sheetEl.classList.remove('is-long'); sheetEl.classList.add('is-tight'); }
+    var h = sheetEl.offsetHeight;
+    if (h > LIMIT) sheetEl.style.zoom = String(Math.floor(LIMIT / h * 1000) / 1000);
     sheetEl.classList.remove('is-measuring');
   }
-  window.addEventListener('beforeprint', function () { buildSheet(); fitSheet(); });
-  function printSheet() { buildSheet(); fitSheet(); window.print(); }
+  window.addEventListener('beforeprint', function () { buildSheet(); });
+  function printSheet() { buildSheet(); window.print(); }
 
   /* ---------- header, toast ---------- */
   function showDoctor() {
