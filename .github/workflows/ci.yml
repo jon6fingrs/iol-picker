@@ -24,10 +24,23 @@ jobs:
           node-version: 22
       - run: node --test 'tests/*.test.js'
 
-  deploy:
-    name: Deploy to GitHub Pages
+  # The site is uploaded in one job and published in the next: the publish
+  # step cannot see an upload made earlier in its own job.
+  build:
+    name: Package site
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -39,10 +52,5 @@ jobs:
       group: pages
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
