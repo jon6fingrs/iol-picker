@@ -278,19 +278,28 @@
     var where = /^https?:$/.test(location.protocol) ? ' (' + location.host + location.pathname.replace(/index\.html$/, '') + ')' : '';
     s += '<p class="sheet__foot">Printed ' + esc(date) + ' from Lens Implant Planner' + esc(where) + '. A starting point for a talk with the surgeon, not a decision; it cannot know the eye’s measurements.</p>';
     sheetEl.innerHTML = s;
+    fitSheet();
   }
-  // fit one Letter page: measure at the printed width (7.3in) against the
-  // printable height (9.8in, less a little slack), stepping the type down
+  // Fit one Letter page: measure at the printed width (7.3in) and step the
+  // type down, then, if even the smallest type is too long, scale the whole
+  // sheet. The limit leaves room for browsers that use their own page
+  // margins and fonts (Safari on iPhone and iPad ignores @page margins and
+  // its system font runs wider), so it is well under the 9.8in that Letter
+  // with .6in margins would allow. Runs with every change, so the sheet is
+  // ready however printing is started.
+  var LIMIT = 9 * 96;
   function fitSheet() {
     sheetEl.classList.remove('is-long', 'is-tight');
+    sheetEl.style.zoom = '';
     sheetEl.classList.add('is-measuring');
-    var limit = 9.6 * 96;
-    if (sheetEl.offsetHeight > limit) sheetEl.classList.add('is-long');
-    if (sheetEl.offsetHeight > limit) { sheetEl.classList.remove('is-long'); sheetEl.classList.add('is-tight'); }
+    if (sheetEl.offsetHeight > LIMIT) sheetEl.classList.add('is-long');
+    if (sheetEl.offsetHeight > LIMIT) { sheetEl.classList.remove('is-long'); sheetEl.classList.add('is-tight'); }
+    var h = sheetEl.offsetHeight;
+    if (h > LIMIT) sheetEl.style.zoom = String(Math.floor(LIMIT / h * 1000) / 1000);
     sheetEl.classList.remove('is-measuring');
   }
-  window.addEventListener('beforeprint', function () { buildSheet(); fitSheet(); });
-  function printSheet() { buildSheet(); fitSheet(); window.print(); }
+  window.addEventListener('beforeprint', function () { buildSheet(); });
+  function printSheet() { buildSheet(); window.print(); }
 
   /* ---------- header, toast ---------- */
   function showDoctor() {
