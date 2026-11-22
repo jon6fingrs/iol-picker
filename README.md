@@ -82,6 +82,7 @@ a printer, that file is saved wherever they put it, as with any document.
 | `tests/rules.test.js` | the clinical rules |
 | `tests/options.test.js` | practice options (lenses offered, laser) |
 | `tests/engine.test.js` | what the page relies on from the engine |
+| `tests/stress.test.js` | rules that must hold for every patient, over every combination of answers and tens of thousands of random patients (fixed seed, about 8 seconds) |
 | `tests/privacy.test.js` | no network, no outside resources, only settings stored |
 | `.github/workflows/ci.yml` | runs the tests; on `main`, publishes `site/` to GitHub Pages |
 
@@ -110,12 +111,32 @@ and `www.lensimplantplanner.com` both redirect there.
 ## Clinical content
 
 The rules live in `site/js/rules.js` and follow the reasoning written out at
-its top. Change a rule and its test (`tests/rules.test.js`) together. In short: monofocal lenses suit every eye;
-extended depth and multifocal lenses need a healthy cornea, macula and optic
-nerve, and bring halos; monovision should be tried with contact lenses
-first; the light adjustable lens follows its FDA labeling. The tool is meant to be completed with a
-professional, as a starting point for a conversation, not a decision, and
-the page and printout say so. Prices are not shown; lenses that usually cost extra are tagged.
+its top. In short:
+
+- Monofocal lenses suit every eye. Extended depth and multifocal lenses need
+  a healthy cornea, macula and optic nerve, and bring halos; mild, stable
+  glaucoma still allows an extended depth lens (usually a design without
+  rings).
+- Monovision should be tried with contact lenses first.
+- The light adjustable lens is a good fit where the result is hard to plan
+  (past LASIK, PRK or RK, an irregular cornea), to match one already in the
+  other eye, or for someone who wants to be free of glasses and has not
+  tried monovision. Where a standard lens already gives what the patient
+  wants, it is possible but more than is needed. It is silicone, so it is
+  not advised with diabetes or a likely need for silicone oil, nor for an
+  eye that cannot gain from fine-tuning (amblyopia, macular disease), and it
+  follows its FDA labeling.
+- For a second eye, the lens already in the first eye steers the choice:
+  matching it is favored, and a lens that splits or stretches focus is only
+  possible next to a monofocal.
+
+Change a rule and its tests together (`tests/rules.test.js`, and the
+must-hold rules in `tests/stress.test.js`), and set `RULES_DATE` in
+`rules.js` to that day: the printout's footer shows it, so a chart copy says
+which rules produced it. Prices are not shown; lenses that usually cost extra
+are tagged. The tool is meant to be completed with a professional, as a
+starting point for a conversation, not a decision, and the page and printout
+say so.
 
 ## License
 

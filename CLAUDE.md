@@ -11,8 +11,10 @@ README.md maps the repo. Read it before changing anything.
   `tests/privacy.test.js` enforces this; extend it rather than loosen it.
 - Clinical rules, the questions and the lenses live in `site/js/rules.js`
   (no DOM), pinned by `tests/rules.test.js` and `tests/options.test.js`;
-  what the page relies on is pinned by `tests/engine.test.js`. Change a rule
-  and its test together. The fuller lens explanations live in
+  what the page relies on is pinned by `tests/engine.test.js`, and rules that
+  must hold for every patient by `tests/stress.test.js`. Change a rule and
+  its tests together, and set `RULES_DATE` in `rules.js` to that day (the
+  printout shows it). The fuller lens explanations live in
   `site/js/app.js` (`ABOUT`).
 - Run `node --test 'tests/*.test.js'` before pushing. For UI changes, check
   390px and desktop widths (no horizontal scroll) and print a PDF of the

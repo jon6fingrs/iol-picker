@@ -157,12 +157,39 @@ test('a corneal scar rules out multifocal and extended depth lenses', () => {
   assert.strictEqual(verdict(a, 'edof'), 'avoid');
 });
 
-test('the light adjustable lens is a good fit for sharp distance, near, or monovision, unless the patient will not do the visits', () => {
-  for (const glasses of ['readers', 'near', 'computer', 'none']) {
-    assert.strictEqual(verdict({ ...base, glasses }, 'lal'), 'good', glasses);
-    assert.strictEqual(verdict({ ...base, glasses, adjust: 'no' }, 'lal'), 'avoid', glasses);
+test('the light adjustable lens is a good fit where the result is hard to plan, or to try monovision', () => {
+  for (const refractive of ['myopic', 'hyperopic', 'lasik', 'rk']) assert.strictEqual(verdict({ ...base, refractive }, 'lal'), 'good', refractive);
+  assert.strictEqual(verdict({ ...base, conditions: cond('keratoconus') }, 'lal'), 'good', 'irregular cornea');
+  for (const glasses of ['none', 'computer']) assert.strictEqual(verdict({ ...base, glasses, monovision: 'never' }, 'lal'), 'good', glasses);
+  // still not if the patient will not do the visits
+  for (const glasses of ['readers', 'near', 'computer', 'none']) assert.strictEqual(verdict({ ...base, glasses, adjust: 'no', refractive: 'lasik' }, 'lal'), 'avoid', glasses);
+});
+
+test('the light adjustable lens is only possible where a standard lens already does the job', () => {
+  for (const glasses of ['readers', 'near']) {
+    const l = T.pick({ ...base, glasses }).lenses.find((x) => x.id === 'lal');
+    assert.strictEqual(l.verdict, 'possible', glasses);
+    assert.match(l.why[0], /standard monofocal lens already gives what you want/);
+    assert.strictEqual(verdict({ ...base, glasses, adjust: 'yes' }, 'lal'), 'possible', glasses + ', even if willing');
   }
-  assert.strictEqual(verdict({ ...base, glasses: 'none', monovision: 'disliked' }, 'lal'), 'possible');
+  for (const glasses of ['none', 'computer']) {
+    const l = T.pick({ ...base, glasses, monovision: 'liked' }).lenses.find((x) => x.id === 'lal');
+    assert.strictEqual(l.verdict, 'possible', glasses);
+    assert.match(l.why.join(' '), /Monovision with standard lenses already fits/);
+    assert.strictEqual(verdict({ ...base, glasses, monovision: 'disliked' }, 'lal'), 'possible', glasses + ' disliked');
+  }
+});
+
+test('the light adjustable lens is not advised where the eye cannot gain from it or silicone oil may be needed', () => {
+  const hard = { ...base, glasses: 'none', refractive: 'lasik', adjust: 'yes' };
+  assert.strictEqual(verdict(hard, 'lal'), 'good');
+  for (const c of ['amblyopia', 'diabetes', 'diabetic', 'rdrisk', 'amd', 'erm']) assert.strictEqual(verdict({ ...hard, conditions: cond(c) }, 'lal'), 'avoid', c);
+  assert.match(T.pick({ ...hard, conditions: cond('diabetes') }).lenses.find((l) => l.id === 'lal').why.join(' '), /silicone/);
+  // the new conditions touch only the light adjustable lens
+  for (const c of ['diabetes', 'rdrisk']) {
+    const before = T.pick(hard).lenses, after = T.pick({ ...hard, conditions: cond(c) }).lenses;
+    before.forEach((l, i) => { if (l.id !== 'lal') assert.strictEqual(after[i].verdict, l.verdict, c + ' ' + l.id); });
+  }
 });
 
 test('past LASIK or PRK makes multifocals possible and leaves extended depth a good fit; past RK rules multifocals out', () => {
@@ -229,4 +256,42 @@ test('LASIK or PRK, not sure which: extended depth and multifocal both possible'
   assert.strictEqual(verdict(a, 'edof'), 'possible');
   assert.strictEqual(verdict({ ...a, glasses: 'none' }, 'multifocal'), 'possible');
   assert.match(T.pick(a).notes.join(' '), /records/);
+});
+
+test('second eye: the lens in the first eye steers the choice', () => {
+  const second = (fellow, extra) => ({ ...base, eyes: 'second', fellow, ...extra });
+  const lens = (a, id) => T.pick(a).lenses.find((l) => l.id === id);
+  // a monofocal in the first eye: multifocal and extended depth only possible
+  for (const fellow of ['distance', 'near', 'unknown']) {
+    assert.strictEqual(verdict(second(fellow, { glasses: 'none' }), 'multifocal'), 'possible', fellow);
+    assert.strictEqual(verdict(second(fellow, { glasses: 'computer' }), 'edof'), 'possible', fellow);
+  }
+  assert.match(lens(second('distance'), 'distance').why.join(' '), /Matches the lens in your other eye/);
+  assert.match(lens(second('distance'), 'monovision').why.join(' '), /this eye would be set for near/);
+  // a multifocal in the first eye: matching it is a good fit, a monofocal is not
+  assert.strictEqual(verdict(second('multifocal', { glasses: 'none' }), 'multifocal'), 'good');
+  assert.strictEqual(verdict(second('multifocal'), 'distance'), 'possible');
+  // an extended depth lens in the first eye: matching it is a good fit
+  assert.strictEqual(verdict(second('edof', { glasses: 'computer' }), 'edof'), 'good');
+  // a light adjustable lens in the first eye: matching it is a good fit, even for distance
+  assert.strictEqual(verdict(second('lal'), 'lal'), 'good');
+  // the other eye's lens never overrides the eye's own health
+  assert.strictEqual(verdict(second('multifocal', { glasses: 'none', conditions: cond('amd') }), 'multifocal'), 'avoid');
+  assert.match(T.pick(second('unknown')).notes.join(' '), /records/);
+  assert.match(T.pick(second('edof')).notes.join(' '), /second eye/);
+});
+
+test('the other eye\'s lens is asked, and counts, only for a second eye', () => {
+  assert.strictEqual(T.questionApplies('fellow', {}, { eyes: 'second' }), true);
+  for (const eyes of ['both', 'one', 'only']) {
+    assert.strictEqual(T.questionApplies('fellow', {}, { eyes }), false, eyes);
+    const a = { ...base, eyes, glasses: 'none' };
+    assert.deepStrictEqual(T.pick({ ...a, fellow: 'multifocal' }), T.pick({ ...a, fellow: 'distance' }), eyes);
+  }
+  assert.strictEqual(T.questionApplies('fellow', {}), true, 'without answers, every question is listed');
+});
+
+test('the rules carry the date of their last change, for the printout', () => {
+  assert.match(T.RULES_DATE, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(!isNaN(Date.parse(T.RULES_DATE)));
 });
