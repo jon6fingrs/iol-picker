@@ -41,7 +41,8 @@
       'The trade-offs are slightly less depth perception and a little less sharpness with both eyes together; glasses may still help for night driving or long reading. Not everyone adapts. It suits people who have used monovision with contact lenses and liked it. Because the result is permanent, try it with contact lenses first: surgery should not be the first time.'],
     lal: [
       'A monofocal lens whose power can be changed after surgery. Once the eye has healed, usually two to three weeks later, you try out the vision. Then, over a few short visits, a measured pattern of ultraviolet light is shone on the lens through a dilated pupil to fine-tune its power, correcting leftover nearsightedness, farsightedness or astigmatism. A final treatment locks the power in.',
-      'It is the surest way to land the target, and you can try the result, including monovision, before it is final. It also helps when the power is hard to predict, such as after LASIK, PRK or RK. UV-protective glasses must be worn during all waking hours, indoors and out, until the power is locked in, usually some weeks. It is not used with macular disease, with medicines that make the eyes sensitive to light, after a herpes infection of the eye, with eyes that shake (nystagmus), or when the pupil does not dilate well.'],
+      'It is the surest way to land the target, and you can try the result, including monovision, before it is final. It suits eyes whose power is hard to predict, such as after LASIK, PRK or RK or with an irregular cornea, and people who want to try monovision without committing; where a standard lens already gives what you want, it adds visits and cost for little gain. UV-protective glasses must be worn during all waking hours, indoors and out, until the power is locked in, usually some weeks.',
+      'It is not used with macular disease, with medicines that make the eyes sensitive to light, after a herpes infection of the eye, with eyes that shake (nystagmus), when the pupil does not dilate well, or in an eye that has always seen less (amblyopia). The lens is made of silicone, so it is also avoided with diabetes or when retina surgery with silicone oil may be needed, since the oil clings to silicone.'],
     edof: [
       'An extended depth of focus (EDOF) lens stretches the range of clear vision from distance to arm’s length. Most people can drive, use a computer and see a dashboard without glasses, and use light reading glasses for small print.',
       'Some notice mild halos or glare around lights at night, far less than with a multifocal lens. Designs differ: some use fine rings and give more near vision with more halos; others have no rings and give fewer halos with a little less near vision.'],
@@ -135,7 +136,7 @@
     QUESTIONS.forEach(function (q) {
       if (!R.questionApplies(q.key, o)) { state[q.key] = DEFAULTS[q.key]; return; }
       if (q.key === 'eyes') h += '<h2 class="panel__h panel__h--sub">Your eyes</h2>';
-      h += '<div class="q"><span class="q__label" id="q-' + q.key + '">' + esc(q.label) + '</span><div class="chips" role="group" aria-labelledby="q-' + q.key + '">';
+      h += '<div class="q" data-qkey="' + q.key + '"' + (q.when ? ' hidden' : '') + '><span class="q__label" id="q-' + q.key + '">' + esc(q.label) + '</span><div class="chips" role="group" aria-labelledby="q-' + q.key + '">';
       q.values.forEach(function (v) { h += '<button type="button" class="chip" data-q="' + q.key + '" data-v="' + esc(v[0]) + '" aria-pressed="false">' + esc(v[1]) + '</button>'; });
       h += '</div></div>';
     });
@@ -221,6 +222,15 @@
   function tagHtml(ts) { return ts.map(function (t) { return '<span class="tag' + (t === SURGEON_TAG ? ' tag--surgeon' : '') + '">' + esc(t) + '</span>'; }).join(''); }
 
   function render() {
+    // follow-up questions show only after the answer they follow; hidden, they
+    // go back to their default so they cannot count
+    QUESTIONS.forEach(function (q) {
+      if (!q.when) return;
+      var el = qBox.querySelector('[data-qkey="' + q.key + '"]');
+      var show = R.questionApplies(q.key, opts(), state);
+      if (!show) state[q.key] = DEFAULTS[q.key];
+      if (el) el.hidden = !show;
+    });
     qBox.querySelectorAll('[data-q]').forEach(function (b) {
       var on = state[b.getAttribute('data-q')] === b.getAttribute('data-v');
       b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on));
@@ -297,6 +307,10 @@
 
   /* ---------- the one-page sheet ---------- */
   var sheetEl = $('sheet');
+  function fmtDate(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  }
   function fmtDob(v) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
     return m ? m[2] + '/' + m[3] + '/' + m[1] : '';
@@ -316,7 +330,7 @@
       '<span>Eye ' + box(patient.eye === 'right') + ' Right ' + box(patient.eye === 'left') + ' Left ' + box(patient.eye === 'both') + ' Both</span></p>';
     s += '<h2>Answers</h2><dl class="sheet__ans">';
     QUESTIONS.forEach(function (q) {
-      if (!R.questionApplies(q.key, o)) return;
+      if (!R.questionApplies(q.key, o, state)) return;
       var v = q.values.filter(function (x) { return x[0] === state[q.key]; })[0];
       s += '<div><dt>' + esc(q.short) + '</dt><dd>' + esc(v ? v[1] : '') + '</dd></div>';
     });
@@ -344,7 +358,7 @@
       (o.laser ? '<span>Laser-assisted ' + box() + ' Yes ' + box() + ' No</span>' : '') + '</p>' +
       '<p>' + fill('Surgeon', settings.doctor) + fill('Date') + '</p></div>';
     var where = /^https?:$/.test(location.protocol) ? ' (' + location.host + location.pathname.replace(/index\.html$/, '').replace(/\/$/, '') + ')' : '';
-    s += '<p class="sheet__foot">Printed ' + esc(date) + ' from Lens Implant Planner' + esc(where) + '. A starting point for a talk with the surgeon, not a decision; it cannot know the eye’s measurements.</p>';
+    s += '<p class="sheet__foot">Printed ' + esc(date) + ' from Lens Implant Planner' + esc(where) + ', rules of ' + esc(fmtDate(R.RULES_DATE)) + '. A starting point for a talk with the surgeon, not a decision; it cannot know the eye’s measurements.</p>';
     sheetEl.innerHTML = s;
     fitSheet();
   }

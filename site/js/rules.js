@@ -10,7 +10,12 @@
  * stable glaucoma still allows an extended depth lens (usually a design
  * without rings); toric versions are added for more than a little
  * astigmatism, and up to about 1 diopter is treated with the laser. The light
- * adjustable lens follows its FDA labeling: UV-protective glasses during all
+ * adjustable lens is a good fit where the result is hard to plan (past
+ * LASIK, PRK or RK, an irregular cornea) or to try monovision without
+ * committing, and otherwise possible, since a standard lens does the job;
+ * it is silicone, so not for diabetes or a likely need for silicone oil,
+ * nor for an eye that cannot gain from fine-tuning (amblyopia). It follows
+ * its FDA labeling: UV-protective glasses during all
  * waking hours until the power is locked in, and not for macular disease,
  * light-sensitizing medicines, herpes of the eye or nystagmus. The light
  * treatments are given through a dilated pupil.
@@ -65,7 +70,8 @@
     { group: 'Retina', items: [
       ['amd', 'Macular degeneration'],
       ['diabetic', 'Diabetic eye disease or swelling of the macula'],
-      ['erm', 'A membrane or hole on the macula']] },
+      ['erm', 'A membrane or hole on the macula'],
+      ['rdrisk', 'Past retinal detachment or retina surgery, or a high risk of one', ['lal']]] },
     { group: 'Cornea and surface', items: [
       ['dryeye', 'Significant dry eye'],
       ['fuchs', 'Fuchs dystrophy or another corneal disease'],
@@ -73,6 +79,7 @@
       ['scar', 'A corneal scar or haze']] },
     { group: 'Other', items: [
       ['amblyopia', 'A lazy eye (amblyopia)'],
+      ['diabetes', 'Diabetes, even without eye disease', ['lal']],
       ['uveitis', 'Uveitis (inflammation inside the eye)'],
       ['pupil', 'A pupil that does not dilate well (pseudoexfoliation, or medicines such as Flomax)', ['lal', 'laser']],
       ['herpes', 'Herpes (cold sore virus) infection of the eye', ['lal']],
@@ -83,18 +90,24 @@
   ];
 
   // The questions, in order: key (the answer's name in pick()), short (its
-  // label on a printout), label, and values [answer, chip text]. DEFAULTS
-  // are the answers before anyone chooses.
+  // label on a printout), label, values [answer, chip text], and optionally
+  // when [key, answer]: asked only after that answer. DEFAULTS are the
+  // answers before anyone chooses.
   var QUESTIONS = [
     { key: 'glasses', short: 'Without glasses', label: 'After surgery, what would you like to do without glasses?', values: [['readers', 'See far; reading glasses are fine'], ['near', 'Read up close; glasses for distance'], ['computer', 'Far and computer or dashboard'], ['none', 'As little glasses as possible, reading too']] },
     { key: 'night', short: 'Glare at night', label: 'How much would glare or halos around lights at night bother you?', values: [['', 'Not at all'], ['some', 'A little would be OK'], ['yes', 'Any would bother me, or I drive a lot at night']] },
     { key: 'monovision', short: 'Monovision in contacts', label: 'Have you tried monovision with contact lenses (one eye for distance, one for near)?', values: [['never', 'Never tried'], ['liked', 'Yes, liked it'], ['disliked', 'Yes, did not like it']] },
     { key: 'adjust', short: 'Light treatments', label: 'Would you come back for several short light treatments, and wear UV-protective glasses for a few weeks, to fine-tune the result?', values: [['', 'Not sure'], ['yes', 'Yes'], ['no', 'No']] },
-    { key: 'eyes', short: 'Eyes having surgery', label: 'Which eyes are having cataract surgery?', values: [['both', 'Both eyes'], ['one', 'Just one eye'], ['only', 'My only seeing eye']] },
+    { key: 'eyes', short: 'Eyes having surgery', label: 'Which eyes are having cataract surgery?', values: [['both', 'Both eyes'], ['one', 'Just one eye'], ['second', 'The second eye; the other already has an implant'], ['only', 'My only seeing eye']] },
+    { key: 'fellow', short: 'Lens in the other eye', label: 'Which lens is in the other eye?', when: ['eyes', 'second'], values: [['unknown', 'Not sure'], ['distance', 'Monofocal, set for distance'], ['near', 'Monofocal, set for near'], ['edof', 'Extended depth of focus'], ['multifocal', 'Multifocal'], ['lal', 'Light adjustable lens']] },
     { key: 'refractive', short: 'LASIK, PRK or RK', label: 'Have you had laser vision correction or RK?', values: [['no', 'No'], ['myopic', 'LASIK or PRK for nearsightedness'], ['hyperopic', 'LASIK or PRK for farsightedness'], ['lasik', 'LASIK or PRK, not sure which'], ['rk', 'RK (radial cuts)']] },
     { key: 'astig', short: 'Astigmatism', label: 'Have you been told you have astigmatism?', values: [['unknown', 'Not sure'], ['no', 'No'], ['little', 'Yes, a little'], ['more', 'Yes, more than a little']] }
   ];
-  var DEFAULTS = { glasses: 'readers', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both' };
+  var DEFAULTS = { glasses: 'readers', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both', fellow: 'unknown' };
+
+  // The date of the last change to these rules, printed on the summary so a
+  // chart copy shows which rules produced it. Change it with every rule change.
+  var RULES_DATE = '2026-11-22';
 
   var RANK = { good: 0, possible: 1, avoid: 2 };
   // lenses placed with laser-assisted surgery whatever the astigmatism
@@ -121,12 +134,16 @@
     }).filter(function (g) { return g.items.length; });
   }
 
-  // which questions apply to what the practice offers
-  function questionApplies(key, o) {
+  // which questions apply to what the practice offers, and, given the
+  // answers so far, to this patient (a question with `when` is asked only
+  // after that answer)
+  function questionApplies(key, o, answers) {
     o = options(o);
     var has = function (id) { return o.lenses.indexOf(id) >= 0; };
     if (key === 'adjust') return has('lal');
     if (key === 'monovision') return has('monovision') || has('lal');
+    var q = QUESTIONS.filter(function (x) { return x.key === key; })[0];
+    if (q && q.when && answers && answers[q.when[0]] !== q.when[1]) return false;
     return true;
   }
 
@@ -140,7 +157,10 @@
   //   monovision: 'liked' | 'disliked' | 'never', adjust: 'yes' | 'no' | '',
   //   astig: 'little' | 'more' | 'no' | 'unknown',
   //   refractive: 'no' | 'myopic' | 'hyperopic' | 'lasik' (LASIK or PRK, not sure which) | 'rk',
-  //   eyes: 'both' | 'one' (only one eye having surgery) | 'only' (an only seeing eye),
+  //   eyes: 'both' | 'one' (only one eye having surgery) | 'second' (the other
+  //     eye already has an implant) | 'only' (an only seeing eye),
+  //   fellow: the implant in the other eye when eyes is 'second': 'unknown' |
+  //     'distance' | 'near' | 'edof' | 'multifocal' | 'lal',
   //   conditions: { id: true } }
   // opts: practice options, see options()
   function pick(a, opts) {
@@ -242,6 +262,32 @@
     if (a.eyes === 'one') {
       say('multifocal', 'possible', 'Works best when both eyes have one; with surgery in one eye, the lens has to work with the other eye.');
       say('edof', 'possible', 'Works best when both eyes have one; with surgery in one eye, the lens has to work with the other eye.');
+    } else if (a.eyes === 'second') {
+      var f = a.fellow || 'unknown';
+      var match = 'Matches the lens in your other eye.';
+      if (f === 'distance' || f === 'near' || f === 'unknown') {
+        var why2 = f === 'unknown' ? 'Works best when both eyes have one; it depends on the lens in your other eye.' : 'Works best when both eyes have one; your other eye has a monofocal lens.';
+        say('multifocal', 'possible', why2);
+        say('edof', 'possible', why2);
+      }
+      if (f === 'distance') {
+        say('distance', 'good', match);
+        say('near', 'good', 'With your other eye set for distance, setting this eye for near makes monovision.');
+        say('monovision', 'good', 'Your other eye is set for distance, so this eye would be set for near.');
+      } else if (f === 'near') {
+        say('near', 'good', match);
+        say('distance', 'good', 'With your other eye set for near, setting this eye for distance makes monovision.');
+        say('monovision', 'good', 'Your other eye is set for near, so this eye would be set for distance.');
+      } else if (f === 'edof') {
+        say('edof', 'good', match);
+        say('multifocal', 'possible', 'Pairing a multifocal with an extended depth lens in the other eye (\u201cmix and match\u201d) is sometimes done to add reading vision.');
+      } else if (f === 'multifocal') {
+        say('multifocal', 'good', match + ' The same kind of lens in both eyes usually works best.');
+        say('edof', 'possible', 'The same kind of lens in both eyes usually works best; pairing with your multifocal is sometimes done.');
+        ['distance', 'near', 'monovision'].forEach(function (id) { say(id, 'possible', 'The same kind of lens in both eyes usually works best; with a monofocal here, reading would rest on your other eye alone.'); });
+      } else if (f === 'lal') {
+        say('lal', 'good', match + ' Both eyes can then be fine-tuned together.');
+      }
     } else if (a.eyes === 'only') {
       say('monovision', 'avoid', 'Monovision needs two seeing eyes.');
       say('multifocal', 'possible', 'With only one seeing eye, there is no other eye to make up for halos or lower contrast.');
@@ -273,6 +319,24 @@
     if (has('uveitis')) {
       say('multifocal', 'avoid', 'Inflammation can return and affect the macula, and these lenses need a healthy one.');
       say('edof', 'possible', 'Only once the inflammation has been quiet for some months.');
+    }
+    if (has('amblyopia')) say('lal', 'avoid', 'An eye that has always seen less cannot gain much from fine-tuning.');
+    // the lens is silicone; silicone oil, used in some retina surgery, clings to it
+    if (has('diabetic') || has('diabetes')) say('lal', 'avoid', 'The lens is made of silicone. Diabetes raises the chance of needing retina surgery later, and the silicone oil used in some retina surgery clings to silicone lenses.');
+    if (has('rdrisk')) say('lal', 'avoid', 'The lens is made of silicone, and the silicone oil sometimes used to repair a retinal detachment clings to silicone lenses and clouds vision.');
+    if (has('keratoconus')) say('lal', 'good', 'With an irregular cornea the power is hard to predict; this lens can be adjusted afterward to get as close as possible.');
+    // The light adjustable lens is a good fit where the result is hard to
+    // plan (past LASIK, PRK or RK, an irregular cornea), to match one already
+    // in the other eye, or where someone who wants to be free of glasses can
+    // try monovision without committing.
+    // Where a standard monofocal lens, or monovision already tried and liked,
+    // gives what the patient wants, it is possible but more than is needed.
+    var lalNeeded = lasik || a.refractive === 'rk' || has('keratoconus') ||
+      (a.eyes === 'second' && a.fellow === 'lal') ||
+      ((a.glasses === 'none' || a.glasses === 'computer') && a.monovision === 'never');
+    if (!lalNeeded) {
+      if (a.glasses !== 'none' && a.glasses !== 'computer') say('lal', 'possible', 'A standard monofocal lens already gives what you want; fine-tuning adds visits and cost for little gain.');
+      else if (a.monovision === 'liked') say('lal', 'possible', 'Monovision with standard lenses already fits what you want; fine-tuning adds visits and cost for little gain.');
     }
     if (has('pupil')) say('lal', 'avoid', 'The light treatments are given through a widely dilated pupil.');
     if (has('herpes')) say('lal', 'avoid', 'The UV light of the treatments can reactivate herpes in the eye.');
@@ -333,6 +397,9 @@
     if (has('glaucoma-mild') && !has('glaucoma-adv') && edof && edof.verdict !== 'avoid') notes.push('With mild, stable glaucoma, an extended depth lens is usually a design without rings, which costs the least contrast.');
     if (has('amblyopia')) notes.push('A lens implant cannot fix a lazy eye: vision in that eye after surgery is usually about what it was with glasses before the cataract.');
     if (a.eyes === 'one') notes.push('With surgery in one eye only, the lens is chosen to work with the other eye. If the other eye needs strong glasses, the new eye is often set to match it; otherwise a contact lens may be needed to balance the two, or it may be worth having surgery on both eyes.');
+    if (a.eyes === 'second') notes.push(a.fellow && a.fellow !== 'unknown'
+      ? 'For a second eye, the lens and its power are chosen to work with the lens already in the first eye, and with how well you see through it.'
+      : 'For a second eye, the lens is chosen to work with the one already in the first eye. Your records, or the surgeon who did the first eye, will show which lens it is.');
     if (a.eyes === 'only') notes.push('Surgery on an only seeing eye is planned with extra care. Ask your surgeon how they approach it.');
     if (a.refractive === 'myopic') notes.push('After LASIK or PRK for nearsightedness, a lens designed to offset the optics of the flattened cornea (one with negative spherical aberration) is usually chosen.');
     if (a.refractive === 'hyperopic') notes.push('After LASIK or PRK for farsightedness, a lens with no or positive spherical aberration is usually chosen to suit the steepened cornea.');
@@ -344,5 +411,5 @@
   }
 
   return { pick: pick, options: options, conditionsFor: conditionsFor, questionApplies: questionApplies,
-    LENSES: LENSES, CONDITIONS: CONDITIONS, QUESTIONS: QUESTIONS, DEFAULTS: DEFAULTS };
+    LENSES: LENSES, CONDITIONS: CONDITIONS, QUESTIONS: QUESTIONS, DEFAULTS: DEFAULTS, RULES_DATE: RULES_DATE };
 });
