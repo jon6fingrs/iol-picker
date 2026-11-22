@@ -91,4 +91,5 @@ test('the surgeon\'s changes are cleared by Start over, like the answers', () =>
   assert.match(body, /review = false/);
   const dirty = app.slice(app.indexOf('function dirty'), app.indexOf('function answers'));
   assert.match(dirty, /overrides/, 'the idle timer clears a patient with changes');
+  assert.match(app, /review = !review; if \(!review\) overrides = \{\}/, 'turning off the review clears the changes');
 });

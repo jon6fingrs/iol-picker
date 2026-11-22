@@ -251,7 +251,7 @@
 
     var shared = sharedTags(res), o = '';
     var moved = res.lenses.filter(function (l) { return l.from; }).length;
-    if (review) o += '<div class="reviewbar"><p><b>Surgeon review.</b> Move any lens to another group for this patient, with a reason if you like. Changes are marked on the printout and cleared by Start over.</p>' +
+    if (review) o += '<div class="reviewbar"><p><b>Surgeon review.</b> Move any lens to another group for this patient, with a reason if you like. Changes are marked on the printout; turning off Surgeon review or Start over removes them.</p>' +
       (moved ? '<button type="button" class="btn btn--quiet btn--sm" data-ov-clear>Undo all changes</button>' : '') + '</div>';
     if (!good.length) o += '<p class="none">No lens fits everything you want. The trade-offs below are the ones to weigh together.</p>';
     if (shared.length) o += '<p class="shared"><span>All recommended lenses:</span> ' + tagHtml(shared) + '</p>';
@@ -491,7 +491,9 @@
   app.addEventListener('click', function (e) {
     if (e.target.closest('[data-print]')) { e.preventDefault(); printSheet(); return; }
     if (e.target.closest('[data-reset]')) { startOver(false); return; }
-    if (e.target.closest('#btn-review')) { review = !review; render(); return; }
+    // turning the review off drops the surgeon's changes: the switch is on/off
+    // for the changes themselves
+    if (e.target.closest('#btn-review')) { review = !review; if (!review) overrides = {}; render(); return; }
     if (e.target.closest('[data-ov-clear]')) { overrides = {}; render(); return; }
     var un = e.target.closest('[data-ov-undo]');
     if (un) { delete overrides[un.getAttribute('data-ov-undo')]; render(); return; }
