@@ -58,10 +58,10 @@ a printer, that file is saved wherever they put it, as with any document.
   choice" and say where they came from, on screen and on the printout (the
   reason, if given, is the line printed under the lens). The controls are
   hidden until the switch is turned on, so a patient filling in the iPad does
-  not see them; the changes stay marked when it is turned off. They are
-  patient information like the answers: kept only in memory, and cleared by
-  Start over or the idle timer. The engine's verdicts are not changed, so
-  the shared rules stay the same on both sites. A lens moved out of "Usually
+  not see them. Turning the switch off removes every change, putting the
+  planner's own results back. The changes are patient information like the
+  answers: kept only in memory, and also cleared by Start over or the idle
+  timer. The rules' verdicts are not changed. A lens moved out of "Usually
   not advised" does not gain the toric or laser tags the engine gives only
   to lenses it recommends.
 - **Print one-page summary** (or the browser's own Print) prints only the
