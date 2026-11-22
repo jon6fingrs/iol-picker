@@ -9,7 +9,8 @@ chart, with the patient's name, the answers, the results, notes and a plan
 box for the surgeon.
 
 It is a plain static web page (HTML, CSS and JavaScript, no build step) and
-runs entirely in the browser.
+runs entirely in the browser. It is live at
+**[lensimplantplanner.com](https://lensimplantplanner.com)**.
 
 Based on the lens picker on [jonathankatzmd.com](https://jonathankatzmd.com),
 by Jonathan Katz, MD.
@@ -86,17 +87,24 @@ Run the tests with `node --test 'tests/*.test.js'` (Node 18 or later). To try
 the page locally, serve the `site` folder, for example
 `python3 -m http.server -d site 8000`, and open http://localhost:8000.
 
-## Hosting on GitHub Pages
+## Hosting
 
-1. Make the repository public (free GitHub Pages needs a public repository
-   unless the account has a paid plan).
-2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-3. Push or merge to `main`. When the tests pass, the "Deploy to GitHub Pages"
-   job publishes the site at `https://jon6fingrs.github.io/iol-picker/`.
+The site is published by GitHub Pages at
+**https://lensimplantplanner.com** (Settings → Pages → Custom domain, with
+"Enforce HTTPS" on). The old address, `https://jon6fingrs.github.io/iol-picker/`,
+and `www.lensimplantplanner.com` both redirect there.
 
-For a custom domain later: Settings → Pages → Custom domain, add the DNS
-records GitHub shows, and tick "Enforce HTTPS". All links in the site are
-relative, so it works at either address.
+- Settings → Pages → Build and deployment → Source is **GitHub Actions**:
+  merging to `main` runs the tests, and the "Deploy to GitHub Pages" job
+  publishes `site/` only if they pass.
+- The repository is public (free GitHub Pages needs that unless the account
+  has a paid plan; the engine sync also relies on the website repo being
+  public).
+- All links in the site are relative, so it works at any address. Settings
+  are saved per address, so a device that used the old github.io address
+  needs the surgeon name entered again (or a new setup link) at the new one.
+- If the domain is ever dropped, remove it under Settings → Pages; the site
+  goes back to the github.io address with no code change.
 
 ## Shared engine
 

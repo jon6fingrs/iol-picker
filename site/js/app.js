@@ -344,7 +344,7 @@
       '<p><span>Astigmatism ' + box() + ' Toric ' + (o.laser ? box() + ' Laser ' : '') + box() + ' Other ' + box() + ' None</span>' +
       (o.laser ? '<span>Laser-assisted ' + box() + ' Yes ' + box() + ' No</span>' : '') + '</p>' +
       '<p>' + fill('Surgeon', settings.doctor) + fill('Date') + '</p></div>';
-    var where = /^https?:$/.test(location.protocol) ? ' (' + location.host + location.pathname.replace(/index\.html$/, '') + ')' : '';
+    var where = /^https?:$/.test(location.protocol) ? ' (' + location.host + location.pathname.replace(/index\.html$/, '').replace(/\/$/, '') + ')' : '';
     s += '<p class="sheet__foot">Printed ' + esc(date) + ' from Lens Implant Planner' + esc(where) + '. A starting point for a talk with the surgeon, not a decision; it cannot know the eye’s measurements.</p>';
     sheetEl.innerHTML = s;
     fitSheet();
