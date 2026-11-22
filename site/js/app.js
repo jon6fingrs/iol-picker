@@ -119,7 +119,7 @@
     patient.name = ''; patient.dob = ''; patient.eye = '';
   }
   function dirty() {
-    return !!(patient.name || patient.dob || patient.eye || Object.keys(state.conditions).length ||
+    return !!(patient.name || patient.dob || patient.eye || Object.keys(state.conditions).length || Object.keys(overrides).length ||
       Object.keys(DEFAULTS).some(function (k) { return state[k] !== DEFAULTS[k]; }));
   }
   function answers() {
@@ -156,10 +156,55 @@
     qBox.innerHTML = h;
   }
 
+  /* ---------- surgeon review: moving lenses between groups ----------
+     For this patient only, in memory like the answers: { lensId: { verdict,
+     note } }. The engine's verdict is kept as l.from on a moved lens, so the
+     page and the printout can say where it came from. Start over clears it. */
+  var GROUPS = ['good', 'possible', 'avoid'];
+  var SURGEON_TAG = 'surgeon\u2019s choice';
+  var review = false, overrides = {};
+  function results() {
+    var res = R.pick(answers(), opts());
+    var lenses = res.lenses.map(function (l) {
+      var ov = overrides[l.id];
+      if (!ov || ov.verdict === l.verdict) return l;
+      var m = {};
+      Object.keys(l).forEach(function (k) { m[k] = l[k]; });
+      m.from = l.verdict; m.verdict = ov.verdict; m.note = ov.note || '';
+      return m;
+    });
+    return { lenses: lenses, notes: res.notes, groups: GROUPS.map(function (v) {
+      return { verdict: v, lenses: lenses.filter(function (l) { return l.verdict === v; }) };
+    }) };
+  }
+  // the one line shown for a lens in the not-advised list and on the printout
+  function reason(l) {
+    if (l.from) return l.note || 'Moved from \u201c' + HEADS[l.from][0] + '\u201d by the surgeon.';
+    return l.why[0] || l.what;
+  }
+  function movedHtml(l) {
+    if (!l.from) return '';
+    return '<p class="moved">Moved from <b>' + esc(HEADS[l.from][0]) + '</b> by the surgeon.' +
+      (l.note && !review ? ' ' + esc(l.note) : '') + '</p>';
+  }
+  function reviewHtml(l) {
+    if (!review) return '';
+    var h = '<div class="ov"><div class="chips chips--sm" role="group" aria-label="Group for ' + esc(l.name) + '">';
+    GROUPS.forEach(function (v) {
+      var on = l.verdict === v;
+      h += '<button type="button" class="chip chip--sm' + (on ? ' is-on' : '') + '" aria-pressed="' + on + '" data-ov="' + l.id + '" data-ov-v="' + v + '">' + { good: 'Good fit', possible: 'Possible', avoid: 'Not advised' }[v] + '</button>';
+    });
+    h += '</div>';
+    if (l.from) h += '<div class="ov__row"><input type="text" class="ov__note" data-ov-note="' + l.id + '" value="' + esc(l.note) + '" maxlength="120" autocomplete="off" placeholder="Reason (optional, printed)" aria-label="Reason for moving ' + esc(l.name) + '">' +
+      '<button type="button" class="btn btn--quiet btn--sm" data-ov-undo="' + l.id + '">Undo</button></div>';
+    return h + '</div>';
+  }
+
   /* ---------- results ---------- */
   var out = $('results'), sum = $('summary');
   function tagsFor(l) {
     var tags = [];
+    if (l.from) tags.push(SURGEON_TAG);
     if (l.tryFirst) tags.push('try with contacts first');
     if (l.toric) tags.push('toric version');
     if (l.laserAstig) tags.push('laser treats astigmatism');
@@ -171,10 +216,10 @@
   function sharedTags(res) {
     var ls = res.groups[0].lenses.concat(res.groups[1].lenses);
     if (ls.length < 2) return [];
-    return tagsFor(ls[0]).filter(function (t) { return ls.every(function (l) { return tagsFor(l).indexOf(t) >= 0; }); });
+    return tagsFor(ls[0]).filter(function (t) { return t !== SURGEON_TAG && ls.every(function (l) { return tagsFor(l).indexOf(t) >= 0; }); });
   }
   function names(ls) { return ls.map(function (l) { return l.name; }).join(', '); }
-  function tagHtml(ts) { return ts.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(''); }
+  function tagHtml(ts) { return ts.map(function (t) { return '<span class="tag' + (t === SURGEON_TAG ? ' tag--surgeon' : '') + '">' + esc(t) + '</span>'; }).join(''); }
 
   function render() {
     qBox.querySelectorAll('[data-q]').forEach(function (b) {
@@ -188,19 +233,26 @@
     var n = Object.keys(state.conditions).length, cc = $('cond-count');
     if (cc) cc.textContent = n ? '(' + n + ' checked)' : '(none checked)';
 
-    var res = R.pick(answers(), opts());
+    var rb = $('btn-review');
+    rb.classList.toggle('is-on', review); rb.setAttribute('aria-pressed', String(review));
+    var res = results();
     var good = res.groups[0].lenses, maybe = res.groups[1].lenses, avoid = res.groups[2].lenses;
     sum.innerHTML = (good.length ? '<b>Good fits:</b> ' + esc(names(good)) : '<b>No lens fits everything you want.</b>') +
       ' <span class="summary__n">· Possible: ' + maybe.length + ' · Not advised: ' + avoid.length + '</span> <a href="#results" data-jump>See details</a> <a href="#" data-print>Print</a>';
 
     var shared = sharedTags(res), o = '';
+    var moved = res.lenses.filter(function (l) { return l.from; }).length;
+    if (review) o += '<div class="reviewbar"><p><b>Surgeon review.</b> Move any lens to another group for this patient, with a reason if you like. Changes are marked on the printout and cleared by Start over.</p>' +
+      (moved ? '<button type="button" class="btn btn--quiet btn--sm" data-ov-clear>Undo all changes</button>' : '') + '</div>';
     if (!good.length) o += '<p class="none">No lens fits everything you want. The trade-offs below are the ones to talk through with your surgeon.</p>';
     if (shared.length) o += '<p class="shared"><span>All recommended lenses:</span> ' + tagHtml(shared) + '</p>';
     res.groups.forEach(function (g) {
       if (!g.lenses.length) return;
       if (g.verdict === 'avoid') {
         o += '<div class="grp grp--avoid"><h3 class="grp__h">' + HEADS.avoid[0] + '</h3><ul class="avoid">';
-        g.lenses.forEach(function (l) { o += '<li><a href="#lens-' + l.id + '">' + esc(l.name) + '</a>: ' + esc(l.why[0] || '') + '</li>'; });
+        g.lenses.forEach(function (l) {
+          o += '<li><a href="#lens-' + l.id + '">' + esc(l.name) + '</a>' + (l.from ? ' ' + tagHtml([SURGEON_TAG]) : '') + ': ' + esc(reason(l)) + reviewHtml(l) + '</li>';
+        });
         o += '</ul></div>';
         return;
       }
@@ -209,9 +261,10 @@
         var tags = tagsFor(l).filter(function (t) { return shared.indexOf(t) < 0; });
         o += '<div class="card"><div class="card__top"><a class="card__name" href="#lens-' + l.id + '">' + esc(l.name) + '</a>' +
           (tags.length ? '<span class="tags">' + tagHtml(tags) + '</span>' : '') + '</div>';
+        o += movedHtml(l);
         o += '<p class="card__what">' + esc(l.what) + '</p>';
         if (l.why.length) o += '<ul class="why">' + l.why.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>';
-        o += '</div>';
+        o += reviewHtml(l) + '</div>';
       });
       o += '</div></div>';
     });
@@ -253,7 +306,7 @@
     return '<span class="' + (cls || '') + '">' + label + ' ' + (value ? '<u>' + esc(value) + '</u>' : '<i></i>') + '</span>';
   }
   function buildSheet(res) {
-    res = res || R.pick(answers(), opts());
+    res = res || results();
     var o = opts();
     var date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     var box = function (on) { return '<span class="sheet__box' + (on ? ' is-on' : '') + '"></span>'; };
@@ -281,7 +334,7 @@
         var tags = g.verdict === 'avoid' ? [] : tagsFor(l).filter(function (t) { return shared.indexOf(t) < 0; });
         s += '<div class="sheet__lens"><b>' + box(false) + ' ' + esc(l.name) + '</b>' +
           (tags.length ? '<span class="sheet__tags">' + esc(tags.join(' · ')) + '</span>' : '') +
-          '<p>' + esc(l.why[0] || l.what) + '</p></div>';
+          '<p>' + esc(reason(l)) + '</p></div>';
       });
       s += '</div>';
     });
@@ -334,6 +387,7 @@
   /* ---------- start over ---------- */
   function startOver(quiet) {
     resetState();
+    overrides = {}; review = false;
     $('pt-name').value = '';
     $('pt-dob').value = '';
     qBox.querySelectorAll('.check input').forEach(function (c) { c.checked = false; });
@@ -424,6 +478,22 @@
   app.addEventListener('click', function (e) {
     if (e.target.closest('[data-print]')) { e.preventDefault(); printSheet(); return; }
     if (e.target.closest('[data-reset]')) { startOver(false); return; }
+    if (e.target.closest('#btn-review')) { review = !review; render(); return; }
+    if (e.target.closest('[data-ov-clear]')) { overrides = {}; render(); return; }
+    var un = e.target.closest('[data-ov-undo]');
+    if (un) { delete overrides[un.getAttribute('data-ov-undo')]; render(); return; }
+    var ov = e.target.closest('[data-ov]');
+    if (ov) {
+      var id = ov.getAttribute('data-ov'), v = ov.getAttribute('data-ov-v');
+      var engine = R.pick(answers(), opts()).lenses.filter(function (l) { return l.id === id; })[0];
+      if (engine && engine.verdict === v) delete overrides[id];
+      else overrides[id] = { verdict: v, note: overrides[id] ? overrides[id].note : '' };
+      render();
+      // keep the focus on the button pressed, now in its new group
+      var again = out.querySelector('[data-ov="' + id + '"][data-ov-v="' + v + '"]');
+      if (again) again.focus({ preventScroll: true });
+      return;
+    }
     if (e.target.closest('[data-jump]')) {
       e.preventDefault();
       out.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -434,6 +504,13 @@
     if (!b) return;
     state[b.getAttribute('data-q')] = b.getAttribute('data-v');
     render();
+  });
+  // typing a reason only redraws the printout, so the field keeps its focus
+  out.addEventListener('input', function (e) {
+    var id = e.target.getAttribute && e.target.getAttribute('data-ov-note');
+    if (!id || !overrides[id]) return;
+    overrides[id].note = e.target.value.replace(/\s+/g, ' ').slice(0, 120);
+    buildSheet();
   });
   qBox.addEventListener('change', function (e) {
     var c = e.target;

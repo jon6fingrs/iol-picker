@@ -63,7 +63,7 @@ test('only the practice settings are stored, under one key, through one function
   const body = app.slice(app.indexOf('function cleanSettings'), app.indexOf('var settings = cleanSettings()'));
   const keys = [...body.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1]);
   assert.deepStrictEqual(keys, ['doctor', 'lenses', 'laser', 'idle']);
-  assert.doesNotMatch(body, /patient|state\./);
+  assert.doesNotMatch(body, /patient|state\.|overrides/);
   for (const [f, src] of js) if (f !== path.join('js', 'app.js')) assert.doesNotMatch(src, /localStorage/, f);
 });
 
@@ -75,11 +75,20 @@ test('patient fields are not remembered by the browser', () => {
   }
 });
 
-test('the patient never goes into the address bar or the page title', () => {
+test('the patient, and the surgeon\'s changes for them, never go into the address bar or the page title', () => {
   const app = read('js/app.js');
   assert.doesNotMatch(app, /document\.title\s*=/);
   // setupLink() builds the only URL, from settings alone
   const body = app.slice(app.indexOf('function setupLink'), app.indexOf('function applySetupLink'));
-  assert.doesNotMatch(body, /patient|state\./);
-  for (const m of app.matchAll(/(pushState|replaceState)\(([^)]*)\)/g)) assert.doesNotMatch(m[2], /patient|state/);
+  assert.doesNotMatch(body, /patient|state\.|overrides/);
+  for (const m of app.matchAll(/(pushState|replaceState)\(([^)]*)\)/g)) assert.doesNotMatch(m[2], /patient|state|overrides/);
+});
+
+test('the surgeon\'s changes are cleared by Start over, like the answers', () => {
+  const app = read('js/app.js');
+  const body = app.slice(app.indexOf('function startOver'), app.indexOf('/* ---------- idle'));
+  assert.match(body, /overrides = \{\}/);
+  assert.match(body, /review = false/);
+  const dirty = app.slice(app.indexOf('function dirty'), app.indexOf('function answers'));
+  assert.match(dirty, /overrides/, 'the idle timer clears a patient with changes');
 });
