@@ -1,6 +1,5 @@
 /* Lens Implant Planner: the page. The rules, including the questions, are in
- * iolpicker-rules.js, copied from jonathankatzmd.com by the sync workflow
- * (README, "Shared engine"); never edit that file here.
+ * rules.js, which is tested.
  *
  * Privacy: this file never sends anything anywhere (the page's
  * Content-Security-Policy blocks it too). The only thing it stores is the
@@ -17,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var R = window.JKIolPicker;
+  var R = window.IolRules;
   var app = document.getElementById('app');
   if (!R || !app) return;
 
@@ -29,8 +28,8 @@
   };
   var DEFAULTS = R.DEFAULTS;
   // The fuller explanation of each lens for "About the lens options". The
-  // rules (shared with jonathankatzmd.com) carry only a one-line summary; a
-  // lens added there without an entry here shows that summary instead.
+  // rules carry only a one-line summary; a lens added there without an entry
+  // here shows that summary instead.
   var ABOUT = {
     distance: [
       'A monofocal lens focuses at one distance. It is the standard lens, the one most people receive, and it is usually covered by insurance. Vision at its set distance is very sharp and high in contrast, and it gives the fewest problems with glare at night.',
@@ -244,7 +243,7 @@
     var moved = res.lenses.filter(function (l) { return l.from; }).length;
     if (review) o += '<div class="reviewbar"><p><b>Surgeon review.</b> Move any lens to another group for this patient, with a reason if you like. Changes are marked on the printout and cleared by Start over.</p>' +
       (moved ? '<button type="button" class="btn btn--quiet btn--sm" data-ov-clear>Undo all changes</button>' : '') + '</div>';
-    if (!good.length) o += '<p class="none">No lens fits everything you want. The trade-offs below are the ones to talk through with your surgeon.</p>';
+    if (!good.length) o += '<p class="none">No lens fits everything you want. The trade-offs below are the ones to weigh together.</p>';
     if (shared.length) o += '<p class="shared"><span>All recommended lenses:</span> ' + tagHtml(shared) + '</p>';
     res.groups.forEach(function (g) {
       if (!g.lenses.length) return;
