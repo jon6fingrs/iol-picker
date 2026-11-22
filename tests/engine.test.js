@@ -1,14 +1,12 @@
 'use strict';
-// The rules engine, site/js/iolpicker-rules.js, is copied from
-// jonathankatzmd.com (README, "Shared engine"); its clinical rules are tested
-// there. These checks cover only what this site relies on, so a change to a
-// rule there flows through, while a change that would break this page stops
-// the sync instead of going live.
+// What the page (site/js/app.js) relies on from the rules engine
+// (site/js/rules.js): its exports, the fields it draws, and that every answer
+// gives every lens a verdict. The clinical rules are in rules.test.js.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const T = require('../site/js/iolpicker-rules.js');
+const T = require('../site/js/rules.js');
 
 const ids = (r) => r.lenses.map((l) => l.id);
 const allIds = T.LENSES.map((l) => l.id);
@@ -18,8 +16,8 @@ test('the engine has everything the page uses', () => {
   for (const f of ['pick', 'options', 'conditionsFor', 'questionApplies']) assert.strictEqual(typeof T[f], 'function', f);
   for (const a of ['LENSES', 'CONDITIONS', 'QUESTIONS']) assert.ok(Array.isArray(T[a]) && T[a].length, a);
   assert.strictEqual(typeof T.DEFAULTS, 'object');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'site', 'js', 'iolpicker-rules.js'), 'utf8');
-  assert.match(src, /root\.JKIolPicker = factory\(\)/, 'browser global the page reads');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'site', 'js', 'rules.js'), 'utf8');
+  assert.match(src, /root\.IolRules = factory\(\)/, 'browser global the page reads');
 });
 
 test('lenses, conditions and questions have the fields the page draws', () => {

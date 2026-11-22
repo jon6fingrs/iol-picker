@@ -1,11 +1,14 @@
-/* Which kinds of lens implant fit which wishes and which eyes
- * (content/learn/lens-implants.md, drawn by iolpicker.js).
- * No DOM, so Node can test it (tests/iolpicker-rules.test.js).
+/* Which kinds of lens implant fit which wishes and which eyes, and the
+ * questions that decide it. Drawn by app.js; no DOM, so Node tests it
+ * (tests/rules.test.js for the clinical rules, tests/options.test.js for the
+ * practice options, tests/engine.test.js for what the page relies on).
  *
- * The rules follow the page's own text: monofocal lenses suit every eye;
+ * The rules: monofocal lenses suit every eye;
  * extended depth and multifocal lenses need a healthy cornea, macula and
  * optic nerve, and bring halos; monovision is a good fit only once it has
- * been tried and liked with contact lenses, because it is permanent; toric versions are added for more than a little
+ * been tried and liked with contact lenses, because it is permanent; mild,
+ * stable glaucoma still allows an extended depth lens (usually a design
+ * without rings); toric versions are added for more than a little
  * astigmatism, and up to about 1 diopter is treated with the laser. The light
  * adjustable lens follows its FDA labeling: UV-protective glasses during all
  * waking hours until the power is locked in, and not for macular disease,
@@ -18,17 +21,12 @@
  * a bleb or tube shunt, trouble lying flat or still); the lens is then
  * placed with standard surgery and its verdict does not change.
  *
- * Practice options (pick's second argument; this page passes none, which
+ * Practice options (pick's second argument, from the page's Settings; none
  * offers everything): a practice can leave out lenses it does not offer
  * (the monofocal set for distance is always offered) and laser-assisted
  * surgery. Lenses left out are dropped from the result, the notes only
  * mention what is offered, and conditionsFor() and questionApplies() leave
  * out what then no longer matters.
- *
- * Shared engine: the generic Lens Implant Planner (github.com/jon6fingrs/
- * iol-picker) copies this file as it is, every day, and runs its own tests on
- * it. Keep the options working and the file free of DOM and page-specific
- * code. QUESTIONS lives here so both pages ask the same questions.
  *
  * Every lens gets a verdict, 'good', 'possible' or 'avoid', with the
  * reasons. The worst reason wins. It is a starting point for a talk with the
@@ -36,24 +34,23 @@
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.JKIolPicker = factory();
+  else root.IolRules = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // anchor: the heading on lens-implants.md that explains the lens
   // extra: usually carries an out-of-pocket charge on top of insurance
   var LENSES = [
-    { id: 'distance', name: 'Monofocal, set for distance', anchor: 'monofocal-lenses', extra: false,
+    { id: 'distance', name: 'Monofocal, set for distance', extra: false,
       what: 'Sharp distance vision with the least glare. Reading glasses for near.' },
-    { id: 'near', name: 'Monofocal, set for near', anchor: 'monofocal-lenses', extra: false,
+    { id: 'near', name: 'Monofocal, set for near', extra: false,
       what: 'Reading without glasses; glasses for driving and distance.' },
-    { id: 'monovision', name: 'Monovision', anchor: 'monovision', extra: false,
+    { id: 'monovision', name: 'Monovision', extra: false,
       what: 'One eye set for distance, the other for near, with monofocal lenses.' },
-    { id: 'lal', name: 'Light adjustable lens', anchor: 'light-adjustable-lenses', extra: true,
+    { id: 'lal', name: 'Light adjustable lens', extra: true,
       what: 'A monofocal lens whose power is fine-tuned with light treatments after surgery, once you can try the result.' },
-    { id: 'edof', name: 'Extended depth of focus', anchor: 'extended-depth-of-focus-lenses', extra: true,
+    { id: 'edof', name: 'Extended depth of focus', extra: true,
       what: 'Distance to arm’s length without glasses; light readers for small print. Mild halos with some designs.' },
-    { id: 'multifocal', name: 'Multifocal', anchor: 'multifocal-lenses', extra: true,
+    { id: 'multifocal', name: 'Multifocal', extra: true,
       what: 'Far, arm’s length and near, with the most freedom from glasses and the most halos.' }
   ];
 
@@ -304,7 +301,7 @@
       // or with more, a toric lens
       var toric = ok && astig && (a.astig === 'more' || !laserOK);
       var wants = o.laser && ok && (astig || LASER_LENSES.indexOf(l.id) >= 0);
-      return { id: l.id, name: l.name, anchor: l.anchor, extra: l.extra, what: l.what, verdict: r.verdict, why: why, toric: toric,
+      return { id: l.id, name: l.name, extra: l.extra, what: l.what, verdict: r.verdict, why: why, toric: toric,
         wantsLaser: wants, laser: wants && laserOK,
         // the laser's curved cuts treat a little astigmatism instead of a toric lens
         laserAstig: ok && astig && a.astig === 'little' && laserOK,
