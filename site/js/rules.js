@@ -20,6 +20,16 @@
  * light-sensitizing medicines, herpes of the eye or nystagmus. The light
  * treatments are given through a dilated pupil.
  *
+ * With astigmatism (a little or more), the monofocal set for distance is
+ * shown twice: standard, which leaves the astigmatism for glasses and is
+ * covered by insurance, and corrected, with laser cuts for a little
+ * (a toric lens without the laser) or a toric lens for more, which usually
+ * costs extra. Wanting distance without glasses favors the corrected one;
+ * being fine with glasses for everything, or preferring what insurance
+ * covers, favors the standard one, and then the monofocals set for near and
+ * monovision are standard lenses too. Preferring what insurance covers makes
+ * every lens with an extra cost 'possible' at best.
+ *
  * Laser-assisted surgery is assumed with a toric, extended depth, multifocal
  * or light adjustable lens, and for a little astigmatism, unless
  * something in the eye rules the laser out (poor dilation, a corneal scar,
@@ -59,6 +69,20 @@
       what: 'Far, arm’s length and near, with the most freedom from glasses and the most halos.' }
   ];
 
+  // The monofocal for distance with its astigmatism corrected: in the result
+  // only when there is astigmatism (a little or more), right after the
+  // distance monofocal, which is then the standard one. Offered whenever that
+  // one is, so it is not a practice option. Its name and summary depend on
+  // how the astigmatism is corrected; these are the general ones.
+  var CORRECTED = { id: 'corrected', name: 'Monofocal for distance, with astigmatism correction', extra: true,
+    what: 'A monofocal lens set for distance, with the astigmatism corrected by laser cuts or a toric lens, for sharp distance without glasses. Reading glasses for near.' };
+  var CORRECTED_LASER = { name: 'Monofocal for distance, with laser',
+    what: 'Laser-assisted surgery with small curved cuts in the cornea that correct the astigmatism, for sharper distance without glasses. Reading glasses for near.' };
+  var CORRECTED_TORIC = { name: 'Monofocal for distance, toric',
+    what: 'A monofocal lens with astigmatism correction built in, for sharp distance without glasses. Reading glasses for near.' };
+  var STANDARD = { name: 'Monofocal for distance, standard',
+    what: 'The standard lens, usually covered by insurance. It does not correct astigmatism, so glasses help for sharp distance as well as for reading.' };
+
   // The checklist, grouped. A condition's effect on each lens is in pick().
   // A third entry lists what the condition matters to ('lal', 'laser'); it is
   // left off the checklist when the practice offers none of them.
@@ -94,7 +118,8 @@
   // when [key, answer]: asked only after that answer. DEFAULTS are the
   // answers before anyone chooses.
   var QUESTIONS = [
-    { key: 'glasses', short: 'Without glasses', label: 'After surgery, what would you like to do without glasses?', values: [['readers', 'See far; reading glasses are fine'], ['near', 'Read up close; glasses for distance'], ['computer', 'Far and computer or dashboard'], ['none', 'As little glasses as possible, reading too']] },
+    { key: 'glasses', short: 'Without glasses', label: 'After surgery, what would you like to do without glasses?', values: [['readers', 'See far; reading glasses are fine'], ['near', 'Read up close; glasses for distance'], ['computer', 'Far and computer or dashboard'], ['none', 'As little glasses as possible, reading too'], ['all', 'Glasses for everything are fine']] },
+    { key: 'cost', short: 'Paying extra', label: 'Would you consider paying extra, beyond what insurance covers, to need glasses less?', values: [['', 'Not sure'], ['yes', 'Yes'], ['no', 'I’d prefer what insurance covers']] },
     { key: 'night', short: 'Glare at night', label: 'How much would glare or halos around lights at night bother you?', values: [['', 'Not at all'], ['some', 'A little would be OK'], ['yes', 'Any would bother me, or I drive a lot at night']] },
     { key: 'monovision', short: 'Monovision in contacts', label: 'Have you tried monovision with contact lenses (one eye for distance, one for near)?', values: [['never', 'Never tried'], ['liked', 'Yes, liked it'], ['disliked', 'Yes, did not like it']] },
     { key: 'adjust', short: 'Light treatments', label: 'Would you come back for several short light treatments, and wear UV-protective glasses for a few weeks, to fine-tune the result?', values: [['', 'Not sure'], ['yes', 'Yes'], ['no', 'No']] },
@@ -103,11 +128,11 @@
     { key: 'refractive', short: 'LASIK, PRK or RK', label: 'Have you had laser vision correction or RK?', values: [['no', 'No'], ['myopic', 'LASIK or PRK for nearsightedness'], ['hyperopic', 'LASIK or PRK for farsightedness'], ['lasik', 'LASIK or PRK, not sure which'], ['rk', 'RK (radial cuts)']] },
     { key: 'astig', short: 'Astigmatism', label: 'Have you been told you have astigmatism?', values: [['unknown', 'Not sure'], ['no', 'No'], ['little', 'Yes, a little'], ['more', 'Yes, more than a little']] }
   ];
-  var DEFAULTS = { glasses: 'readers', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both', fellow: 'unknown' };
+  var DEFAULTS = { glasses: 'readers', cost: '', night: '', monovision: 'never', adjust: '', astig: 'unknown', refractive: 'no', eyes: 'both', fellow: 'unknown' };
 
   // The date of the last change to these rules, printed on the summary so a
   // chart copy shows which rules produced it. Change it with every rule change.
-  var RULES_DATE = '2026-11-22';
+  var RULES_DATE = '2026-11-25';
 
   var RANK = { good: 0, possible: 1, avoid: 2 };
   // lenses placed with laser-assisted surgery whatever the astigmatism
@@ -152,7 +177,8 @@
     return words.slice(0, -1).join(', ') + ' and ' + words[words.length - 1];
   }
 
-  // answers: { glasses: 'readers' | 'near' | 'computer' | 'none',
+  // answers: { glasses: 'readers' | 'near' | 'computer' | 'none' | 'all' (glasses for everything are fine),
+  //   cost: '' | 'yes' | 'no' (would pay extra, beyond insurance, to need glasses less; 'no' prefers what insurance covers),
   //   night: '' | 'some' | 'yes' (glare at night: fine / a little is OK / any would bother; true means 'yes'),
   //   monovision: 'liked' | 'disliked' | 'never', adjust: 'yes' | 'no' | '',
   //   astig: 'little' | 'more' | 'no' | 'unknown',
@@ -191,6 +217,11 @@
       if (a.monovision !== 'disliked') say('lal', 'good', 'Can be fine-tuned for distance in one eye and arm’s length in the other once you try it.');
       else say('lal', 'possible', 'Fine-tuned for distance, a computer would be softer without glasses.');
       say('multifocal', 'possible', 'Covers arm’s length, but brings more halos than you may need.');
+    } else if (a.glasses === 'all') {
+      say('distance', 'good', 'Matches what you want: the standard lens, with glasses for whatever needs them.');
+      say('edof', 'possible', 'More range than you need if glasses are fine, with some halos.');
+      say('multifocal', 'avoid', 'If glasses are fine for everything, the halos and lower contrast are not worth it.');
+      say('monovision', 'possible', 'Its point is needing glasses less; if glasses are fine for everything, it adds little.');
     } else if (a.glasses === 'near') {
       say('near', 'good', 'Matches what you want: reading without glasses, glasses for driving and distance.');
       say('distance', 'possible', 'Set for distance, you would need glasses to read instead.');
@@ -343,6 +374,25 @@
     if (has('nystagmus')) say('lal', 'avoid', 'The eye has to hold still during the light treatments.');
     if (has('photo')) say('lal', 'avoid', 'Medicines that make you sensitive to light can make the UV treatments harmful to the eye. Tell your surgeon every medicine you take.');
 
+    // With astigmatism the distance monofocal comes in two: the corrected
+    // one starts from the same verdict and reasons, then each gets what
+    // the astigmatism changes.
+    var split = a.astig === 'little' || a.astig === 'more';
+    if (split) {
+      out.corrected = { verdict: out.distance.verdict, why: out.distance.why.slice() };
+      if (a.glasses === 'readers' || a.glasses === 'computer' || a.glasses === 'none') {
+        // what it matched assumed the astigmatism corrected; that is now the other one
+        out.distance.why = out.distance.why.filter(function (w) { return w.verdict !== 'good'; });
+        say('distance', 'possible', a.astig === 'little'
+          ? 'It leaves the little astigmatism as it is: distance is usable without glasses but softer, and glasses make it sharp.'
+          : 'It leaves the astigmatism as it is, so glasses are needed for clear distance as well as for reading.');
+      }
+      if (a.glasses === 'all') say('corrected', 'possible', 'Glasses can correct the astigmatism, so correcting it in surgery adds cost for little gain if glasses are fine for everything.');
+    }
+    // standard lenses for near and monovision when glasses are fine or the
+    // patient prefers what insurance covers: glasses correct the astigmatism
+    var plain = a.glasses === 'all' || a.cost === 'no';
+
     // why the laser would not be used, if anything rules it out
     var noLaser = [];
     if (o.laser) {
@@ -354,18 +404,37 @@
     // the laser is offered and nothing in the eye rules it out
     var laserOK = o.laser && !noLaser.length;
 
-    var lenses = LENSES.filter(function (l) { return offers(l.id); }).map(function (l) {
+    var shown = [];
+    LENSES.forEach(function (l) {
+      if (!offers(l.id)) return;
+      shown.push(l);
+      if (l.id === 'distance' && split) shown.push(CORRECTED);
+    });
+    var lenses = shown.map(function (l) {
       var r = out[l.id];
       // the reasons that decided the verdict come first; a lens ruled out
       // keeps only the reasons against it
       var why = r.why.filter(function (w) { return r.verdict !== 'avoid' || w.verdict === 'avoid'; })
         .sort(function (x, y) { return RANK[y.verdict] - RANK[x.verdict]; }).map(function (w) { return w.text; });
-      var ok = r.verdict !== 'avoid', astig = (a.astig === 'little' || a.astig === 'more') && l.id !== 'lal';
+      var ok = r.verdict !== 'avoid';
+      // the standard distance monofocal, and with plain the other monofocals,
+      // leave astigmatism to glasses
+      var astig = split && l.id !== 'lal' && l.id !== 'distance' && !(plain && (l.id === 'near' || l.id === 'monovision'));
       // a little astigmatism is treated with laser cuts; without the laser,
       // or with more, a toric lens
       var toric = ok && astig && (a.astig === 'more' || !laserOK);
       var wants = o.laser && ok && (astig || LASER_LENSES.indexOf(l.id) >= 0);
-      return { id: l.id, name: l.name, extra: l.extra, what: l.what, verdict: r.verdict, why: why, toric: toric,
+      var name = l.name, what = l.what;
+      if (l.id === 'distance' && split) { name = STANDARD.name; what = STANDARD.what; }
+      if (l.id === 'corrected') { var c = toric ? CORRECTED_TORIC : CORRECTED_LASER; name = c.name; what = c.what; }
+      var verdict = r.verdict;
+      // preferring what insurance covers: anything that usually costs extra
+      // is possible at best, and says why first
+      if (a.cost === 'no' && (l.extra || toric || wants)) {
+        if (verdict === 'good') verdict = 'possible';
+        if (ok) why.unshift('Usually an out-of-pocket cost beyond what insurance covers, which you would rather avoid.');
+      }
+      return { id: l.id, name: name, extra: l.extra, what: what, verdict: verdict, why: why, toric: toric,
         wantsLaser: wants, laser: wants && laserOK,
         // the laser's curved cuts treat a little astigmatism instead of a toric lens
         laserAstig: ok && astig && a.astig === 'little' && laserOK,
@@ -378,6 +447,7 @@
 
     var lal = offers('lal');
     var notes = [];
+    if (split) notes.push('A standard monofocal lens does not correct astigmatism; glasses after surgery can. Correcting it during surgery, ' + (a.astig === 'little' && laserOK ? 'with the laser' : 'with a toric lens') + ', gives sharper distance without glasses and usually costs extra.');
     if (a.astig === 'more') notes.push('With more than a little astigmatism, a toric version of the lens corrects it' + (lal ? '; the light adjustable lens corrects it with its light treatments.' : '.'));
     if (a.astig === 'little' && laserOK) notes.push('A little astigmatism, up to about 1 diopter, is usually corrected with small curved laser cuts in the cornea during laser-assisted surgery, without a toric lens.' + (lal ? ' The light adjustable lens can also correct it with its light treatments.' : ''));
     if (a.astig === 'little' && !laserOK) notes.push((o.laser ? 'Without the laser, a little astigmatism is corrected with a toric version of the lens instead.' : 'A little astigmatism is usually corrected with a toric version of the lens.') + (lal ? ' The light adjustable lens can also correct it with its light treatments.' : ''));
@@ -411,5 +481,5 @@
   }
 
   return { pick: pick, options: options, conditionsFor: conditionsFor, questionApplies: questionApplies,
-    LENSES: LENSES, CONDITIONS: CONDITIONS, QUESTIONS: QUESTIONS, DEFAULTS: DEFAULTS, RULES_DATE: RULES_DATE };
+    LENSES: LENSES, CORRECTED: CORRECTED, CONDITIONS: CONDITIONS, QUESTIONS: QUESTIONS, DEFAULTS: DEFAULTS, RULES_DATE: RULES_DATE };
 });

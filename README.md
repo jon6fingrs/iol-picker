@@ -113,6 +113,16 @@ and `www.lensimplantplanner.com` both redirect there.
 The rules live in `site/js/rules.js` and follow the reasoning written out at
 its top. In short:
 
+- With astigmatism, the monofocal set for distance shows as two options:
+  **standard** (usually covered by insurance; glasses correct the
+  astigmatism) and **corrected**, with laser cuts for a little astigmatism or
+  a toric lens for more (usually extra cost). Wanting distance without
+  glasses favors the corrected one. "Glasses for everything are fine", or
+  preferring what insurance covers, favors the standard one, and then the
+  near monofocal and monovision are standard lenses too.
+- A patient who prefers what insurance covers sees nothing with an extra
+  cost as a good fit; those lenses stay "possible", so the cost can still be
+  talked through.
 - Monofocal lenses suit every eye. Extended depth and multifocal lenses need
   a healthy cornea, macula and optic nerve, and bring halos; mild, stable
   glaucoma still allows an extended depth lens (usually a design without

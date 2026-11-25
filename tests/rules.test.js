@@ -15,7 +15,7 @@ const ALL = T.CONDITIONS.flatMap((g) => g.items.map((i) => i[0]));
 
 test('every lens gets one verdict, in one group, with a reason unless it is a clean fit', () => {
   const r = T.pick(base);
-  assert.strictEqual(r.groups.reduce((n, g) => n + g.lenses.length, 0), T.LENSES.length);
+  assert.strictEqual(r.groups.reduce((n, g) => n + g.lenses.length, 0), r.lenses.length);
   for (const l of r.lenses) {
     assert.ok(['good', 'possible', 'avoid'].includes(l.verdict), l.id);
     if (l.verdict !== 'good') assert.ok(l.why.length, l.id + ' needs a reason');
@@ -23,7 +23,7 @@ test('every lens gets one verdict, in one group, with a reason unless it is a cl
 });
 
 test('a monofocal set for distance is never ruled out, whatever the eye', () => {
-  for (const glasses of ['readers', 'near', 'computer', 'none']) {
+  for (const glasses of ['readers', 'near', 'computer', 'none', 'all']) {
     assert.notStrictEqual(verdict({ ...base, glasses, night: true, conditions: cond(...ALL) }, 'distance'), 'avoid');
   }
 });
@@ -75,9 +75,56 @@ test('the light adjustable lens follows its labeling', () => {
   assert.strictEqual(verdict({ ...base, adjust: 'yes', refractive: 'rk' }, 'lal'), 'good');
 });
 
-test('astigmatism marks toric versions, except the light adjustable lens and ruled-out lenses', () => {
+test('astigmatism marks toric versions, except the light adjustable lens, the standard monofocal and ruled-out lenses', () => {
   const r = T.pick({ ...base, astig: 'more', conditions: cond('amd') });
-  for (const l of r.lenses) assert.strictEqual(l.toric, l.id !== 'lal' && l.verdict !== 'avoid', l.id);
+  for (const l of r.lenses) assert.strictEqual(l.toric, !['lal', 'distance'].includes(l.id) && l.verdict !== 'avoid', l.id);
+});
+
+test('with astigmatism, the distance monofocal comes as standard and corrected', () => {
+  const lens = (a, id) => T.pick(a).lenses.find((l) => l.id === id);
+  for (const astig of ['little', 'more']) {
+    const a = { ...base, astig };
+    const std = lens(a, 'distance'), fix = lens(a, 'corrected');
+    assert.match(std.name, /standard/);
+    assert.ok(!std.toric && !std.laser && !std.laserAstig, 'the standard lens leaves astigmatism to glasses');
+    // wanting distance without glasses: the corrected one fits, the standard one is possible
+    assert.strictEqual(fix.verdict, 'good', astig);
+    assert.strictEqual(std.verdict, 'possible', astig);
+    assert.ok(!std.why.some((w) => /Matches what you want/.test(w)), astig);
+    assert.match(T.pick(a).notes.join(' '), /does not correct astigmatism/);
+  }
+  assert.match(lens({ ...base, astig: 'little' }, 'corrected').name, /with laser/);
+  assert.match(lens({ ...base, astig: 'more' }, 'corrected').name, /toric/);
+  assert.match(lens({ ...base, astig: 'little', conditions: cond('flat') }, 'corrected').name, /toric/);
+});
+
+test('glasses for everything are fine: the standard monofocal is the fit, even with astigmatism', () => {
+  for (const astig of ['no', 'unknown', 'little', 'more']) {
+    const a = { ...base, glasses: 'all', astig };
+    assert.strictEqual(verdict(a, 'distance'), 'good', astig);
+    assert.strictEqual(verdict(a, 'multifocal'), 'avoid', astig);
+    for (const id of ['edof', 'lal', 'near', 'monovision']) assert.strictEqual(verdict(a, id), 'possible', astig + ' ' + id);
+    const r = T.pick(a);
+    for (const l of r.lenses) if (['distance', 'near', 'monovision'].includes(l.id)) assert.ok(!l.toric && !l.laser && !l.laserAstig, astig + ' ' + l.id);
+    if (astig === 'little' || astig === 'more') assert.strictEqual(verdict(a, 'corrected'), 'possible', astig);
+  }
+});
+
+test('preferring what insurance covers: nothing that costs extra is a good fit, and the monofocals stay standard', () => {
+  for (const glasses of ['readers', 'near', 'computer', 'none', 'all']) for (const astig of ['no', 'unknown', 'little', 'more']) {
+    const r = T.pick({ ...base, glasses, astig, cost: 'no' });
+    for (const l of r.lenses) {
+      const costs = l.extra || l.toric || l.laser;
+      if (costs) assert.notStrictEqual(l.verdict, 'good', glasses + ' ' + astig + ' ' + l.id);
+      if (costs && l.verdict !== 'avoid') assert.match(l.why[0], /out-of-pocket/, l.id);
+      if (['distance', 'near', 'monovision'].includes(l.id)) assert.ok(!l.toric && !l.laser, l.id);
+    }
+  }
+  // still a good fit where it costs nothing
+  assert.strictEqual(verdict({ ...base, glasses: 'near', astig: 'more', cost: 'no' }, 'near'), 'good');
+  assert.strictEqual(verdict({ ...base, astig: 'no', cost: 'no' }, 'distance'), 'good');
+  // willing or unsure changes nothing
+  for (const cost of ['', 'yes']) assert.deepStrictEqual(T.pick({ ...base, glasses: 'none', astig: 'more', cost }), T.pick({ ...base, glasses: 'none', astig: 'more' }));
 });
 
 test('lenses that usually cost extra are marked, and the out-of-pocket note always shows', () => {
@@ -119,7 +166,8 @@ test('laser-assisted surgery goes with toric, extended depth, multifocal and lig
   const lens = (a, id) => T.pick(a).lenses.find((l) => l.id === id);
   const healthy = { ...base, glasses: 'none', astig: 'more' };
   for (const id of ['multifocal', 'edof', 'lal']) assert.strictEqual(lens({ ...base, glasses: 'none', astig: 'no' }, id).laser, true, id);
-  assert.strictEqual(lens(healthy, 'distance').laser, true, 'toric version');
+  assert.strictEqual(lens(healthy, 'corrected').laser, true, 'toric version');
+  assert.strictEqual(lens(healthy, 'distance').laser, false, 'standard monofocal');
   assert.strictEqual(lens({ ...base, astig: 'no' }, 'distance').laser, false, 'plain monofocal');
   for (const c of ['pupil', 'scar', 'bleb', 'flat']) {
     const a = { ...healthy, conditions: cond(c) };
@@ -137,18 +185,18 @@ test('laser-assisted surgery goes with toric, extended depth, multifocal and lig
 test('a little astigmatism is treated with the laser, not a toric lens, unless the laser is ruled out', () => {
   const lens = (a, id) => T.pick(a).lenses.find((l) => l.id === id);
   const little = { ...base, astig: 'little' };
-  assert.strictEqual(lens(little, 'distance').toric, false);
-  assert.strictEqual(lens(little, 'distance').laser, true);
+  assert.strictEqual(lens(little, 'corrected').toric, false);
+  assert.strictEqual(lens(little, 'corrected').laser, true);
   for (const l of T.pick({ ...little, glasses: 'none' }).lenses) {
     assert.strictEqual(l.toric, false, l.id);
-    if (l.verdict !== 'avoid') assert.strictEqual(l.laserAstig, l.id !== 'lal', l.id);
+    if (l.verdict !== 'avoid') assert.strictEqual(l.laserAstig, !['lal', 'distance'].includes(l.id), l.id);
   }
-  assert.strictEqual(lens({ ...little, conditions: cond('bleb') }, 'distance').laserAstig, false);
+  assert.strictEqual(lens({ ...little, conditions: cond('bleb') }, 'corrected').laserAstig, false);
   assert.match(T.pick(little).notes.join(' '), /1 diopter/);
   const noLaser = { ...little, conditions: cond('bleb') };
-  assert.strictEqual(lens(noLaser, 'distance').toric, true);
-  assert.strictEqual(lens(noLaser, 'distance').laser, false);
-  assert.strictEqual(lens({ ...base, astig: 'more' }, 'distance').toric, true);
+  assert.strictEqual(lens(noLaser, 'corrected').toric, true);
+  assert.strictEqual(lens(noLaser, 'corrected').laser, false);
+  assert.strictEqual(lens({ ...base, astig: 'more' }, 'corrected').toric, true);
 });
 
 test('a corneal scar rules out multifocal and extended depth lenses', () => {

@@ -55,8 +55,9 @@ test('without the laser, nothing is laser-assisted, astigmatism goes to a toric 
     }
     assert.doesNotMatch(notes(r), /laser/i, astig);
   }
-  const little = T.pick({ ...base, astig: 'little' }, o).lenses.find((l) => l.id === 'distance');
+  const little = T.pick({ ...base, astig: 'little' }, o).lenses.find((l) => l.id === 'corrected');
   assert.strictEqual(little.toric, true);
+  assert.match(little.name, /toric/);
 });
 
 test('without the laser, conditions that only matter to the laser are not asked about', () => {

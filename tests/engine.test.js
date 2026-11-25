@@ -11,6 +11,8 @@ const T = require('../site/js/rules.js');
 const ids = (r) => r.lenses.map((l) => l.id);
 const allIds = T.LENSES.map((l) => l.id);
 const base = () => ({ ...T.DEFAULTS, conditions: {} });
+// with astigmatism the corrected distance monofocal follows the standard one
+const expected = (a, offered) => offered.flatMap((id) => (id === 'distance' && ['little', 'more'].includes(a.astig) ? [id, 'corrected'] : [id]));
 
 test('the engine has everything the page uses', () => {
   for (const f of ['pick', 'options', 'conditionsFor', 'questionApplies']) assert.strictEqual(typeof T[f], 'function', f);
@@ -39,10 +41,11 @@ test('lenses, conditions and questions have the fields the page draws', () => {
 
 test('every answer gives every lens one verdict, in one group, with the flags the page shows', () => {
   for (const q of T.QUESTIONS) for (const [v] of q.values) {
-    const r = T.pick({ ...base(), [q.key]: v });
-    assert.deepStrictEqual(ids(r), allIds, q.key + '=' + v);
+    const a = { ...base(), [q.key]: v };
+    const r = T.pick(a);
+    assert.deepStrictEqual(ids(r), expected(a, allIds), q.key + '=' + v);
     assert.deepStrictEqual(r.groups.map((g) => g.verdict), ['good', 'possible', 'avoid']);
-    assert.strictEqual(r.groups.reduce((n, g) => n + g.lenses.length, 0), allIds.length);
+    assert.strictEqual(r.groups.reduce((n, g) => n + g.lenses.length, 0), r.lenses.length);
     for (const l of r.lenses) {
       assert.ok(['good', 'possible', 'avoid'].includes(l.verdict), l.id);
       assert.ok(Array.isArray(l.why), l.id);
@@ -50,6 +53,17 @@ test('every answer gives every lens one verdict, in one group, with the flags th
     }
     assert.ok(r.notes.length && r.notes.every((n) => typeof n === 'string'));
   }
+});
+
+test('the corrected distance monofocal has the fields the page draws, and shows only with astigmatism', () => {
+  const c = T.CORRECTED;
+  assert.ok(c.id === 'corrected' && c.name && c.what && c.extra === true);
+  assert.ok(!allIds.includes('corrected'), 'not a practice option');
+  for (const astig of ['little', 'more']) {
+    const r = T.pick({ ...base(), astig }, { lenses: [] });
+    assert.deepStrictEqual(ids(r), ['distance', 'corrected'], astig);
+  }
+  for (const astig of ['no', 'unknown']) assert.ok(!ids(T.pick({ ...base(), astig })).includes('corrected'), astig);
 });
 
 test('practice options: lenses not offered are dropped, the distance monofocal stays', () => {

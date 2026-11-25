@@ -51,7 +51,11 @@ function broken(a, o) {
   const out = [];
   const rule = (ok, name) => { if (!ok) out.push(name); };
 
-  rule(JSON.stringify(res.lenses.map((l) => l.id)) === JSON.stringify(LENS_IDS.filter(offers)), 'the result lists exactly the lenses offered');
+  const split = a.astig === 'little' || a.astig === 'more';
+  const listed = LENS_IDS.filter(offers).flatMap((id) => (id === 'distance' && split ? [id, 'corrected'] : [id]));
+  rule(JSON.stringify(res.lenses.map((l) => l.id)) === JSON.stringify(listed), 'the result lists exactly the lenses offered, with the corrected monofocal only with astigmatism');
+  // the monofocals left as standard lenses, astigmatism to glasses
+  const plain = (id) => id === 'distance' || ((a.glasses === 'all' || a.cost === 'no') && (id === 'near' || id === 'monovision'));
   rule(res.groups.reduce((n, g) => n + g.lenses.filter((l) => l.verdict === g.verdict).length, 0) === res.lenses.length, 'each lens is in exactly its own group');
   rule(!/undefined|null|NaN|\[object/.test(JSON.stringify(res)), 'no undefined, null or NaN in the output');
   rule(new Set(res.notes).size === res.notes.length, 'no note repeats');
@@ -64,11 +68,14 @@ function broken(a, o) {
     rule(opts.laser || (!l.laser && !l.laserAstig), 'no laser when the practice has none');
     rule(laserOK || (!l.laser && !l.laserAstig), 'no laser when the eye rules it out');
     if (a.astig === 'no' || a.astig === 'unknown') rule(!l.toric && !l.laserAstig, 'no astigmatism treatment without known astigmatism');
-    if (l.verdict !== 'avoid' && l.id !== 'lal' && a.astig === 'more') rule(l.toric, 'more astigmatism: every viable lens is toric');
-    if (l.verdict !== 'avoid' && l.id !== 'lal' && a.astig === 'little') rule(laserOK ? l.laserAstig : l.toric, 'a little astigmatism: laser cuts if possible, otherwise toric');
+    if (plain(l.id)) rule(!l.toric && !l.laserAstig && !l.laser, 'a standard monofocal leaves astigmatism to glasses, without the laser');
+    else if (l.verdict !== 'avoid' && l.id !== 'lal' && a.astig === 'more') rule(l.toric, 'more astigmatism: every other viable lens is toric');
+    else if (l.verdict !== 'avoid' && l.id !== 'lal' && a.astig === 'little') rule(laserOK ? l.laserAstig : l.toric, 'a little astigmatism: laser cuts if possible, otherwise toric');
+    if (a.cost === 'no' && (l.extra || l.toric || l.laser)) rule(l.verdict !== 'good', 'preferring what insurance covers: nothing that costs extra is a good fit');
   }
 
   rule(v('distance') !== 'avoid', 'a monofocal for distance is never ruled out');
+  if (split) rule(v('corrected') !== 'avoid', 'the corrected monofocal for distance is never ruled out');
   const macula = has('amd') || has('diabetic') || has('erm');
   if (macula || has('glaucoma-adv') || has('fuchs') || has('keratoconus') || has('scar')) {
     if (offers('multifocal')) rule(v('multifocal') === 'avoid', 'an eye short of contrast rules out a multifocal');
@@ -93,7 +100,10 @@ function broken(a, o) {
     if (offers('multifocal')) rule(v('multifocal') !== 'good', 'a monofocal in the first eye: a multifocal is not a good fit');
     if (offers('edof')) rule(v('edof') !== 'good', 'a monofocal in the first eye: extended depth is not a good fit');
   }
-  if (a.glasses === 'readers' && !(a.eyes === 'second' && a.fellow === 'multifocal')) rule(v('distance') === 'good', 'wanting distance with readers: the distance monofocal is a good fit');
+  if (a.glasses === 'readers' && a.cost !== 'no' && !(a.eyes === 'second' && a.fellow === 'multifocal')) rule(v(split ? 'corrected' : 'distance') === 'good', 'wanting distance with readers: the distance monofocal, corrected for any astigmatism, is a good fit');
+  if (a.glasses === 'readers' && split) rule(v('distance') === 'possible', 'wanting distance with readers and astigmatism: the standard monofocal is possible');
+  if (a.glasses === 'all' && !(a.eyes === 'second' && a.fellow === 'multifocal')) rule(v('distance') === 'good', 'glasses for everything are fine: the standard monofocal is a good fit');
+  if (a.glasses === 'all' && split) rule(v('corrected') === 'possible', 'glasses for everything are fine: correcting astigmatism is possible, more than needed');
   if (a.glasses === 'near' && offers('near') && !(a.eyes === 'second' && a.fellow === 'multifocal')) rule(v('near') === 'good', 'wanting to read without glasses: the near monofocal is a good fit');
 
   const notes = res.notes.join(' ');
