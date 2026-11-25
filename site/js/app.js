@@ -34,6 +34,9 @@
     distance: [
       'A monofocal lens focuses at one distance. It is the standard lens, the one most people receive, and it is usually covered by insurance. Vision at its set distance is very sharp and high in contrast, and it gives the fewest problems with glare at night.',
       'Set for distance, the most common choice, driving, television and faces across a room are clear without glasses. Reading glasses are needed for near, and arm’s length (a computer or the car dashboard) is usable but softer.'],
+    corrected: [
+      'Astigmatism means the front of the eye is curved more like a football than a basketball, which smears vision in one direction. A standard monofocal lens does not correct it, so with astigmatism, glasses help for sharp distance vision as well as for reading.',
+      'Correcting it during surgery gives sharper distance without glasses. A little astigmatism, up to about 1 diopter, is usually corrected with small curved laser cuts in the cornea during laser-assisted surgery; more is corrected with a toric monofocal lens, which has the correction built in and is turned to line up with it. Either usually costs extra beyond what insurance covers. If glasses are fine for distance too, the standard lens works well.'],
     near: [
       'The same standard lens, set so that reading is clear without glasses, with glasses worn for distance and driving. Some people who have been nearsighted all their lives, and are used to reading without glasses, prefer this.'],
     monovision: [
@@ -286,10 +289,18 @@
   /* ---------- about the lenses (only what the practice offers) ---------- */
   function buildAbout() {
     var o = opts(), h = '';
+    // the corrected distance monofocal comes right after the standard one
+    var about = [];
     R.LENSES.forEach(function (l) {
       if (o.lenses.indexOf(l.id) < 0) return;
+      about.push(l);
+      if (l.id === 'distance') about.push(R.CORRECTED);
+    });
+    about.forEach(function (l) {
+      var paras = (ABOUT[l.id] || [l.what]).filter(function (p, i) { return o.laser || l.id !== 'corrected' || i === 0; });
+      if (l.id === 'corrected' && !o.laser) paras.push('Correcting it during surgery, with a toric monofocal lens that has the correction built in, gives sharper distance without glasses. It usually costs extra beyond what insurance covers. If glasses are fine for distance too, the standard lens works well.');
       h += '<article class="lens" id="lens-' + l.id + '"><h3>' + esc(l.name) + (l.extra ? ' <span class="tag">often extra cost</span>' : '') + '</h3>' +
-        (ABOUT[l.id] || [l.what]).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</article>';
+        paras.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</article>';
     });
     h += '<article class="lens" id="lens-toric"><h3>Toric versions, for astigmatism</h3>' +
       '<p>Astigmatism means the front of the eye is curved more like a football than a basketball, which smears vision in one direction. A toric lens has astigmatism correction built in, and is turned during surgery to line up with it. Without it, an eye with significant astigmatism would need glasses for clear distance vision even after surgery.</p>' +
